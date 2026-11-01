@@ -149,7 +149,10 @@ button:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid
 .hint, .from, .muted { color: var(--muted); font-size: 0.9rem; }
 
 /* ---------- Site shell: banner, top bar, homepage ---------- */
-.sitebanner { background: var(--amber-soft); color: var(--ink); text-align: center; font-size: 0.9rem; padding: 8px 16px; }
+.sitebanner { background: var(--amber-soft); color: var(--ink); text-align: center; font-size: 0.9rem; padding: 8px 44px; position: relative; }
+.sitebanner[hidden] { display: none; }
+.sbclose { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font-size: 1.3rem; line-height: 1; cursor: pointer; }
+.sbclose:hover { background: rgba(0,0,0,0.08); }
 .topbar { display: block; border-bottom: 1px solid var(--line); background: var(--panel); }
 .topbar .in { max-width: 1120px; margin: 0 auto; padding: 12px max(16px, env(safe-area-inset-left, 0px)); display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
@@ -214,9 +217,20 @@ button:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid
 .coursehead { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
 .backlink { font-size: 0.9rem; text-decoration: none; }
 [hidden] { display: none !important; }
+/* Tap a figure to see it full screen (helps small labels on phones) */
+figure.fig svg { cursor: zoom-in; }
+.fighint { display: none; font-size: 0.75rem; color: var(--muted); margin: 2px 0 0; }
+@media (max-width: 640px) { .fighint { display: block; } }
+#figzoom { position: fixed; inset: 0; z-index: 1000; background: var(--bg); overflow: auto; -webkit-overflow-scrolling: touch; }
+#figzoom[hidden] { display: none; }
+#figzoom .zin { min-width: 640px; max-width: 1100px; margin: 0 auto; padding: 56px 16px 24px; color: var(--ink); }
+#figzoom svg { width: 100%; height: auto; display: block; }
+#figzoom .zcap { color: var(--muted); font-size: 0.9rem; margin-top: 10px; }
+#figzoom .zclose { position: fixed; top: 10px; right: 12px; z-index: 1001; }
 </style>
 
-<div class="sitebanner"><b>Under construction.</b> Lessons are still being written and are pending expert review.</div>
+<div class="sitebanner" id="sitebanner"><span><b>Under construction.</b> Lessons are still being written and are pending expert review.</span><button type="button" class="sbclose" id="sbclose" aria-label="Hide this notice">×</button></div>
+<script>try{if(localStorage.getItem("tof-banner-hidden")==="1")document.getElementById("sitebanner").hidden=true;}catch(e){}document.getElementById("sbclose").onclick=function(){document.getElementById("sitebanner").hidden=true;try{localStorage.setItem("tof-banner-hidden","1");}catch(e){}};</script>
 <header class="topbar"><div class="in">
   <a class="brand" href="#/">
     <svg width="34" height="34" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="13" style="fill:var(--accent-soft)"></circle><path d="M14 4 C 19 8, 19 12, 14 14 C 9 16, 9 20, 14 24" fill="none" style="stroke:var(--accent)" stroke-width="2.6" stroke-linecap="round"></path></svg>
@@ -317,36 +331,27 @@ button:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid
 /* ---------- Figures (original schematic drawings; not to scale) ---------- */
 const FONT = `font-family="Atkinson Hyperlegible, sans-serif"`;
 const MONO = `font-family="JetBrains Mono, monospace"`;
-const fig = (svg, cap, w = 420) => `<figure class="fig" style="max-width:${w}px">${svg}<figcaption>${cap}</figcaption></figure>`;
+const fig = (svg, cap, w = 420) => `<figure class="fig" style="max-width:${w}px">${svg}<p class="fighint">Tap the figure to enlarge it.</p><figcaption>${cap}</figcaption></figure>`;
 const T = (x, y, s, size = 11, anchor = "start", extra = "") => `<text x="${x}" y="${y}" fill="currentColor" font-size="${size}" text-anchor="${anchor}" ${FONT} ${extra}>${s}</text>`;
 const BONE = `style="fill:var(--fig-fill);stroke:currentColor" stroke-width="1.4"`;
+/* Orientation marker (rule 22): AXES(x, y, {u, d, l, r}) draws a small cross with a letter at each named end. */
+const AXES = (x, y, o = {}, fs = 10) => `<g ${FONT} font-size="${fs}" font-weight="700" fill="currentColor" text-anchor="middle">${(o.u || o.d) ? `<path d="M${x} ${y - 12} V${y + 12}" style="stroke:currentColor" stroke-width="1"/>` : ""}${(o.l || o.r) ? `<path d="M${x - 12} ${y} H${x + 12}" style="stroke:currentColor" stroke-width="1"/>` : ""}${o.u ? `<text x="${x}" y="${y - 15}">${o.u}</text>` : ""}${o.d ? `<text x="${x}" y="${y + 12 + fs}">${o.d}</text>` : ""}${o.l ? `<text x="${x - 13}" y="${y + fs * 0.35}" text-anchor="end">${o.l}</text>` : ""}${o.r ? `<text x="${x + 13}" y="${y + fs * 0.35}" text-anchor="start">${o.r}</text>` : ""}</g>`;
+/* Multi-panel figures: panels sit side by side on wide screens and stack on phones. */
+const panelSvg = (w, h, label, body, maxw = 300) => `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${label}" style="flex:1 1 220px;max-width:${maxw}px">${body}</svg>`;
+const panels = (...svgs) => `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px">${svgs.join("")}</div>`;
 const MARK = (w = 2, dash = "") => `style="stroke:var(--mark);fill:none" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ""}`;
 
 const FIG_SAGITTAL = fig(`<svg viewBox="0 0 320 300" role="img" aria-label="Normal sagittal curves of the spine">
 <path d="M150 20 C 185 55, 185 85, 150 110 C 105 145, 105 190, 150 215 C 185 235, 185 265, 160 290" ${MARK(4)}/>
 ${T(200, 70, "Cervical lordosis")}${T(200, 84, "(curves toward front)", 10)}
-${T(30, 160, "Thoracic kyphosis")}${T(30, 174, "(curves toward back)", 10)}
+${T(102, 160, "Thoracic kyphosis", 11, "end")}${T(102, 174, "(curves toward back)", 10, "end")}
+${AXES(292, 160, { u: "S", d: "I" })}
 ${T(200, 250, "Lumbar lordosis")}
 ${T(290, 20, "Front →", 10, "end")}${T(20, 20, "← Back", 10)}
 </svg>`, "Side (sagittal) view. Kyphosis bows backward; lordosis bows forward. A normal spine is straight on a front-on (PA) film.", 340);
 
-const FIG_VERTEBRA = fig(`<svg viewBox="0 0 420 240" role="img" aria-label="Lumbar vertebra side view with pars interarticularis">
-<rect x="30" y="70" width="110" height="80" rx="8" ${BONE}/>
-${T(85, 115, "Body", 12, "middle")}
-<rect x="140" y="88" width="50" height="28" ${BONE}/>
-${T(165, 132, "Pedicle", 10, "middle")}
-<path d="M190 70 L215 30 L240 30 L232 70 Z" ${BONE}/>
-${T(250, 34, "Superior facet", 10)}
-<path d="M190 70 L232 70 L240 150 L215 190 L195 190 Z" ${BONE}/>
-<path d="M232 70 L330 95 L330 120 L240 125 Z" ${BONE}/>
-${T(285, 140, "Lamina →", 10)}${T(290, 154, "spinous process", 10)}
-${T(250, 200, "Inferior facet", 10)}
-<path d="M200 128 L236 120" style="stroke:var(--bad);fill:none" stroke-width="3"/>
-<circle cx="218" cy="124" r="22" ${MARK(2, "4 3")}/>
-${T(20, 230, "Pars interarticularis: the bridge between the facets", 11, "start", 'font-weight="700"')}
-</svg>`, "Lumbar vertebra, side view (front on the left). The red line marks where a spondylolysis (pars stress fracture) occurs. Based on Netter's Concise Orthopaedic Anatomy, p. 35.", 440);
-
-const FIG_COBB = fig(`<svg viewBox="0 0 410 250" role="img" aria-label="Cobb angle with end vertebrae and apex">
+const FIG_COBB = fig(`<svg viewBox="0 0 460 260" role="img" aria-label="Cobb angle with end vertebrae and apex">
+<g transform="translate(450 0) scale(-1 1)">
 <g ${BONE}>
 <rect x="120" y="30" width="60" height="24" rx="4" transform="rotate(-18 150 42)"/>
 <rect x="132" y="72" width="56" height="22" rx="4" transform="rotate(-8 160 83)"/>
@@ -356,45 +361,26 @@ const FIG_COBB = fig(`<svg viewBox="0 0 410 250" role="img" aria-label="Cobb ang
 </g>
 <line x1="10" y1="72" x2="250" y2="-6" ${MARK(2, "6 4")}/>
 <line x1="10" y1="170" x2="250" y2="248" ${MARK(2, "6 4")}/>
-${T(14, 125, "Cobb ≈ 36°", 13, "start", MONO)}
-${T(200, 46, "Upper end vertebra (most tilted)", 10)}
-${T(206, 126, "Apical vertebra", 10)}${T(206, 139, "(furthest from midline,", 9)}${T(206, 151, "most rotated)", 9)}
-${T(200, 212, "Lower end vertebra (most tilted)", 10)}
-</svg>`, "Draw a line along the top endplate of the upper end vertebra and the bottom endplate of the lower end vertebra. The angle between them is the Cobb angle. Based on Miller's Review, p. 244.", 440);
-
-const FIG_RISSER = fig(`<svg viewBox="0 0 360 200" role="img" aria-label="Risser staging of the iliac apophysis">
-<path d="M40 170 C 40 60, 160 30, 320 80 L 300 170 Z" ${BONE}/>
-<path d="M44 140 C 50 90, 90 60, 140 48" style="stroke:var(--accent);fill:none" stroke-width="7" stroke-linecap="round"/>
-<path d="M146 46 C 190 40, 230 44, 260 56" style="stroke:var(--accent);fill:none" stroke-width="7" stroke-opacity=".75" stroke-linecap="round"/>
-<path d="M266 58 C 290 66, 305 72, 318 80" style="stroke:var(--accent);fill:none" stroke-width="7" stroke-opacity=".5" stroke-linecap="round"/>
-${T(56, 80, "1", 13, "start", MONO)}${T(130, 34, "2", 13, "start", MONO)}${T(220, 32, "3", 13, "start", MONO)}${T(300, 58, "4", 13, "start", MONO)}
-${T(40, 190, "Lateral (ASIS) →→→ medial (PSIS)", 10)}
-${T(160, 130, "Iliac wing", 12)}
-</svg>`, "The iliac crest apophysis ossifies from lateral to medial. Risser 1 to 4 = how far it has spread (25% steps); Risser 5 = fused to the ilium. Peak growth happens at Risser 0, before menarche (Miller's, pp. 244–246).", 380);
+</g>
+${T(452, 125, "Cobb ≈ 36°", 13, "end", MONO)}
+${T(244, 38, "Upper end vertebra", 11, "end")}${T(244, 52, "(most tilted)", 10, "end")}
+${T(244, 118, "Apical vertebra", 11, "end")}${T(244, 132, "(furthest from midline,", 10, "end")}${T(244, 145, "most rotated)", 10, "end")}
+${T(244, 206, "Lower end vertebra", 11, "end")}${T(244, 220, "(most tilted)", 10, "end")}
+${AXES(40, 128, { u: "S", d: "I", l: "R", r: "L" })}
+</svg>`, "AP view (patient's right on your left), showing a typical right thoracic curve. Draw a line along the top endplate of the upper end vertebra and the bottom endplate of the lower end vertebra. The angle between them is the Cobb angle. Based on Miller's Review, p. 244.", 460);
 
 function figRegions() {
   const L = ["T1","T2","T3","T4","T5","T6","T7","T8","T9","T10","T11","T12","L1","L2","L3","L4","L5"];
   let s = "", y0 = 18, h = 22;
   L.forEach((n, i) => { const y = y0 + i * h; s += `<rect x="120" y="${y}" width="44" height="16" rx="3" ${BONE}/>` + T(110, y + 12, n, 10, "end", MONO); });
-  const br = (a, b, label, sub, col) => { const y1 = y0 + a * h + 2, y2 = y0 + b * h + 14; return `<path d="M176 ${y1} h8 V ${y2} h-8" style="stroke:${col};fill:none" stroke-width="2.5"/>` + T(192, (y1 + y2) / 2, label, 11, "start", 'font-weight="700"') + T(192, (y1 + y2) / 2 + 13, sub, 10); };
+  const br = (a, b, label, sub, col, end) => { const y1 = y0 + a * h + 2, y2 = end ?? (y0 + b * h + 14); return `<path d="M176 ${y1} h8 V ${y2} h-8" style="stroke:${col};fill:none" stroke-width="2.5"/>` + T(192, (y1 + y2) / 2, label, 11, "start", 'font-weight="700"') + T(192, (y1 + y2) / 2 + 13, sub, 10); };
   s += br(2, 4, "Proximal thoracic (PT)", "apex T3 to T5", "var(--accent)");
-  s += br(5, 11, "Main thoracic (MT)", "apex T6 to T11–12 disc", "var(--mark)");
+  s += br(5, 10, "Main thoracic (MT)", "apex T6 to T11–12 disc", "var(--mark)", y0 + 10 * h + 19);
   s += br(11, 15, "Thoracolumbar / lumbar (TL/L)", "apex T12 to L4", "var(--good)");
+  s += AXES(40, 200, { u: "S", d: "I" });
   return fig(`<svg viewBox="0 0 400 400" role="img" aria-label="Lenke curve regions">${s}</svg>`, "A curve is assigned to a region by where its apex sits. Its Cobb angle is still measured between its own end vertebrae, which can lie outside these ranges. Apex ranges are the Scoliosis Research Society definitions as commonly taught.", 400);
 }
 const FIG_REGIONS = figRegions();
-
-const FIG_STRUCTURAL = fig(`<svg viewBox="0 0 380 260" role="img" aria-label="Structural versus compensatory curve on bending films">
-${T(70, 18, "Standing PA", 11, "middle", 'font-weight="700"')}
-<path d="M70 30 C 115 70, 115 120, 70 150 C 35 175, 35 215, 70 240" style="stroke:currentColor;fill:none" stroke-width="7" stroke-linecap="round"/>
-${T(112, 95, "MT 52°", 10)}${T(10, 200, "TL/L 38°", 10)}
-${T(200, 18, "Bend right", 11, "middle", 'font-weight="700"')}
-<path d="M200 30 C 238 70, 238 120, 200 150 C 190 175, 190 215, 200 240" style="stroke:currentColor;fill:none" stroke-width="7" stroke-linecap="round"/>
-${T(234, 95, "MT 45°", 10)}${T(234, 108, "stays ≥25°:", 9)}${T(234, 120, "structural", 9, "start", 'font-weight="700"')}
-${T(320, 18, "Bend left", 11, "middle", 'font-weight="700"')}
-<path d="M320 30 C 360 70, 360 120, 320 150 C 312 175, 312 215, 320 240" style="stroke:currentColor;fill:none" stroke-width="7" stroke-linecap="round"/>
-${T(256, 205, "TL/L 18°", 10)}${T(256, 218, "<25°: non-", 9)}${T(256, 230, "structural", 9, "start", 'font-weight="700"')}
-</svg>`, "Side-bending films show which curves are stiff. The largest curve (the major curve) is always structural; a minor curve is structural if it can't bend below 25°.", 400);
 
 const FIG_LUMBARMOD = (() => {
   const panel = (x, shift, lab, txt) => `<g transform="translate(${x} 0)">
@@ -403,12 +389,12 @@ const FIG_LUMBARMOD = (() => {
 <ellipse cx="${42 + shift}" cy="80" rx="6" ry="9" style="fill:none;stroke:currentColor" stroke-width="1.4"/>
 <ellipse cx="${78 + shift}" cy="80" rx="6" ry="9" style="fill:none;stroke:currentColor" stroke-width="1.4"/>
 ${T(60, 175, lab, 16, "middle", 'font-weight="700"')}${T(60, 192, txt, 9.5, "middle")}</g>`;
-  return fig(`<svg viewBox="0 0 380 200" role="img" aria-label="Lenke lumbar modifiers A B C">
-${panel(0, 0, "A", "line between pedicles")}${panel(125, -18, "B", "line touches pedicle")}${panel(250, -60, "C", "line misses vertebra")}
-${T(190, 14, "Dashed = centre sacral vertical line (CSVL)", 10, "middle")}</svg>`, "The lumbar modifier: where the CSVL falls relative to the apical vertebra of the lumbar curve (Miller's, p. 245).", 400);
+  return fig(`<svg viewBox="0 0 410 200" role="img" aria-label="Lenke lumbar modifiers A B C">
+${panel(0, 0, "A", "line between pedicles")}${panel(125, 18, "B", "line touches pedicle")}${panel(245, 60, "C", "line misses vertebra")}
+${T(170, 14, "Dashed = centre sacral vertical line (CSVL)", 10, "middle")}${AXES(375, 26, { l: "R", r: "L" })}</svg>`, "The lumbar modifier: where the CSVL falls relative to the apical vertebra of the lumbar curve (Miller's, p. 245). AP view (patient's right on your left); the lumbar curve here is convex to the patient's left, so its apex moves to your right.", 420);
 })();
 
-const FIG_CONGENITAL = fig(`<svg viewBox="0 0 380 190" role="img" aria-label="Congenital vertebral anomalies">
+const FIG_CONGENITAL = fig(`<svg viewBox="0 0 420 190" role="img" aria-label="Congenital vertebral anomalies">
 <g ${BONE}>
 <rect x="20" y="20" width="70" height="30" rx="4"/><path d="M20 60 L60 60 L20 80 Z"/><rect x="20" y="90" width="70" height="30" rx="4" transform="rotate(-12 55 105)"/>
 <rect x="150" y="20" width="70" height="30" rx="4"/><rect x="150" y="60" width="70" height="30" rx="4"/><rect x="150" y="100" width="70" height="30" rx="4"/>
@@ -419,28 +405,8 @@ const FIG_CONGENITAL = fig(`<svg viewBox="0 0 380 190" role="img" aria-label="Co
 ${T(55, 160, "Hemivertebra", 11, "middle", 'font-weight="700"')}${T(55, 175, "failure of formation", 10, "middle")}
 ${T(185, 160, "Unilateral bar", 11, "middle", 'font-weight="700"')}${T(185, 175, "failure of segmentation", 10, "middle")}
 ${T(315, 160, "Block vertebra", 11, "middle", 'font-weight="700"')}${T(315, 175, "bilateral; best prognosis", 10, "middle")}
-</svg>`, "Congenital scoliosis comes from half-formed vertebrae (hemivertebra) or vertebrae joined on one side (bar). A bar plus a hemivertebra on the opposite side progresses fastest (Miller's, p. 248).", 400);
-
-const FIG_WEDGE = fig(`<svg viewBox="0 0 340 170" role="img" aria-label="Anterior wedging in Scheuermann kyphosis">
-<g ${BONE}>
-<path d="M40 30 L120 20 L120 60 L40 54 Z"/><path d="M40 66 L120 70 L120 110 L40 96 Z"/><path d="M40 108 L120 122 L120 160 L40 136 Z"/>
-</g>
-${T(30, 50, "Front", 10, "end")}${T(130, 90, "Back", 10)}
-${T(170, 60, "Front of each body is shorter", 11)}
-${T(170, 78, "than the back: ≥5° wedging", 11)}
-${T(170, 96, "at 3 vertebrae in a row", 11, "start", 'font-weight="700"')}
-${T(170, 120, "+ thoracic kyphosis >45°", 11)}
-</svg>`, "Scheuermann kyphosis, side view (Miller's, p. 251).", 480);
-
-const FIG_MEYERDING = fig(`<svg viewBox="0 0 360 170" role="img" aria-label="Meyerding grading">
-<rect x="60" y="90" width="200" height="60" rx="6" ${BONE}/>
-${[1,2,3].map(i => `<line x1="${60 + i * 50}" y1="90" x2="${60 + i * 50}" y2="150" style="stroke:currentColor" stroke-dasharray="3 3"/>`).join("")}
-${["I","II","III","IV"].map((g, i) => T(85 + i * 50, 140, g, 13, "middle", MONO)).join("")}
-<rect x="130" y="28" width="200" height="56" rx="6" style="fill:var(--fig-fill);stroke:var(--mark)" stroke-width="2"/>
-${T(230, 62, "L5", 13, "middle", MONO)}${T(160, 120, "S1", 12, "middle", MONO)}
-<path d="M60 22 H130" ${MARK(2)}/><path d="M124 17 L130 22 L124 27" ${MARK(2)}/>
-${T(16, 18, "Slip = 35% → grade II", 11)}
-</svg>`, "Divide the top of S1 into quarters; the grade is how many quarters L5 has slid forward. Grade V (spondyloptosis) means L5 has slid completely off (Miller's, p. 253).", 380);
+${AXES(392, 75, { u: "S", d: "I", l: "R", r: "L" })}
+</svg>`, "Congenital scoliosis comes from half-formed vertebrae (hemivertebra) or vertebrae joined on one side (bar). A bar plus a hemivertebra on the opposite side progresses fastest (Miller's, p. 248). AP view (patient's right on your left).", 440);
 
 /* ---------- Hip figures v2 (original schematic drawings; not to scale) ---------- */
 const SOFT = `style="fill:none;stroke:currentColor" stroke-width="1.2" stroke-dasharray="4 3"`;
@@ -465,38 +431,202 @@ ${physis && cap ? `<path d="M33.2 9.9 Q 38 26, 46.8 42.6" transform="translate($
 ${extra}</g>`;
 }
 
-/* ---- 1. Infant pelvis with Hilgenreiner, Perkin, Shenton, acetabular index ---- */
+/* ---- Shared hip parts (redraw batch, 2026-11-01): right hemipelvis close-up and older child's proximal femur, AP, radiograph convention (lateral on the viewer's left). Socket centre (120,120), radius 38. ---- */
+const HP = { cx: 120, cy: 120, rs: 38 };
+const hpPt = (deg, r = HP.rs, c = HP) => [+(c.cx + r * Math.cos(deg * Math.PI / 180)).toFixed(1), +(c.cy + r * Math.sin(deg * Math.PI / 180)).toFixed(1)];
+/* edge = angle of the lateral acetabular edge from the vertical through the socket centre (about the LCEA) */
+const hipEdge = edge => hpPt(-90 - edge);
+function pelvisR(edge) {
+  const [sx, sy] = hpPt(60), [ex, ey] = hipEdge(edge), span = 60 - (-90 - edge);
+  const [ox, oy] = hpPt(-50, HP.rs);
+  return `<path d="M46 0 H220 V240 H142 C 140 214, 140 190, ${sx} ${sy} A ${HP.rs} ${HP.rs} 0 ${span > 180 ? 1 : 0} 0 ${ex} ${ey} L ${ex - 18} ${ey - 24} C 64 44, 52 22, 46 0 Z" ${BONE}/>
+<path d="M${ox} ${oy} A ${HP.rs} ${HP.rs} 0 0 0 ${ex} ${ey}" ${LINE("currentColor", 3.2)}/>
+<ellipse cx="194" cy="204" rx="15" ry="21" style="fill:var(--panel);stroke:currentColor" stroke-width="1.2"/>`;
+}
+/* proximal femur with its head centre at (hx, hy); physis = draw the growth plate at the head-neck junction */
+function femurR(hx, hy, physis = false) {
+  const dx = hx - 120, dy = hy - 120;
+  return `<g transform="translate(${dx} ${dy})"><path d="M91 103 C 80 112, 68 122, 58 128 C 52 120, 42 124, 42 136 C 42 170, 48 200, 50 252 H 90 C 90 222, 96 198, 114 154 Z" ${BONE}/>
+<circle cx="120" cy="120" r="34" ${BONE}/>${physis ? `<path d="M91 103 Q 96 132, 114 154" ${LINE("var(--accent)", 2.4)}/>` : ""}</g>`;
+}
+
+/* ---- 4. LCEA (older child / adolescent, right hip) ---- */
+const FIG_LCEA = (() => {
+  const B = 'font-weight="700"';
+  const panel = (edge, title, verdict) => {
+    const [ex, ey] = hipEdge(edge), r = 62, [ax, ay] = hpPt(-90 - edge, r), [lx, ly] = hpPt(-90 - edge, 92), [tx, ty] = hpPt(-90 - edge - 9, 72);
+    return panelSvg(220, 290, `Lateral centre-edge angle, ${title.toLowerCase()}`, `
+${T(110, 15, title, 12, "middle", B)}
+<g transform="translate(0 22)">
+${pelvisR(edge)}${femurR(120, 120)}
+<line x1="120" y1="120" x2="120" y2="2" ${MARK(1.8, "6 4")}/>
+<line x1="120" y1="120" x2="${lx}" y2="${ly}" ${MARK(2)}/>
+<path d="M120 ${120 - r} A ${r} ${r} 0 0 0 ${ax} ${ay}" ${LINE("var(--mark)", 2.4)}/>
+${DOT(120, 120, "currentColor", 3)}${DOT(ex, ey, "var(--bad)", 3.4)}
+${T(82, ey + 18, "lateral edge", 10.5, "end", B)}
+${T(tx, ty + 4, `${edge}°`, 12, "end", `${B} style="fill:var(--mark)"`)}
+${AXES(192, 34, { u: "S", d: "I", l: "L", r: "M" })}
+</g>
+${T(110, 284, verdict, 10.5, "middle")}`, 260);
+  };
+  return fig(panels(panel(32, "Covered head", "LCEA 32°: normal (over 25°)"), panel(14, "Dysplastic hip", "LCEA 14°: dysplasia (under 20°)")),
+  "Right hip on an AP pelvis (lateral on your left), older child or adolescent. The lateral centre-edge angle (Wiberg) runs between a vertical line through the centre of the femoral head and a line to the lateral edge of the acetabular roof (the dense weight-bearing roof line). Rough rules: under 20° = dysplasia, 20–25° = borderline, over 25° = normal; children have their own age-specific normal values (not in Miller's).", 560);
+})();
+
+/* ---- 7. Migration percentage (Reimers), right hip, child ---- */
+const FIG_MP = (() => {
+  const B = 'font-weight="700"';
+  const [px] = hipEdge(32);
+  const panel = (hx, hy, title, mp) => {
+    const L = hx - 34, Rr = hx + 34, yb = hy + 50, H = 96;
+    return panelSvg(220, 300, `Migration percentage, ${title.toLowerCase()}`, `
+${T(110, 15, title, 12, "middle", B)}
+<g transform="translate(0 22)">
+${pelvisR(32)}<path d="M${hpPt(-38)[0]} ${hpPt(-38)[1]} L ${hpPt(-38, 54)[0]} ${hpPt(-38, 54)[1]}" style="stroke:var(--panel)" stroke-width="4"/>${femurR(hx, hy, true)}
+<line x1="4" y1="${H}" x2="216" y2="${H}" ${MARK(1.6)}/>${T(212, H - 5, "H", 12, "end", B)}
+<line x1="${px}" y1="10" x2="${px}" y2="${yb + 18}" ${MARK(1.8, "6 4")}/>${T(px - 5, 22, "P", 12, "end", B)}
+<line x1="${L}" y1="${hy}" x2="${L}" y2="${yb + 6}" ${LINE("currentColor", 1, "2 3")}/><line x1="${Rr}" y1="${hy}" x2="${Rr}" y2="${yb + 6}" ${LINE("currentColor", 1, "2 3")}/>
+<path d="M${L} ${yb} H${Rr}" ${LINE("currentColor", 1.6)}/><path d="M${L} ${yb - 5} v10 M${Rr} ${yb - 5} v10" ${LINE("currentColor", 1.6)}/>${T(Rr + 6, yb + 4, "B", 12, "start", B)}
+<path d="M${L} ${yb - 12} H${px}" ${LINE("var(--bad)", 3.4)}/>${T(L - 4, yb - 8, "A", 12, "end", `${B} style="fill:var(--bad)"`)}
+${AXES(192, 34, { u: "S", d: "I", l: "L", r: "M" })}
+</g>
+${T(110, 296, `MP = A ÷ B ≈ ${mp}%`, 12, "middle", MONO)}`, 260);
+  };
+  return fig(panels(panel(120, 120, "Head in the socket", 20), panel(103, 106, "Head migrating out", 45)),
+  "Reimers migration percentage on an AP pelvis, right hip (lateral on your left), legs straight and in neutral. <b>A</b> is the width of the head lateral to Perkin line (<b>P</b>); <b>B</b> is the whole head width; both are measured parallel to Hilgenreiner line (<b>H</b>). MP = A ÷ B × 100. A rising MP means the hip is drifting out of the socket. Referral and surgery thresholds vary between hip surveillance programmes (not in Miller's).", 560);
+})();
+
+/* ---- Graf ultrasound, standard display (ilium vertical at the top; lateral on the viewer's left for a right hip) ---- */
+const FIG_GRAF = (() => {
+  const B = 'font-weight="700"', CART = `style="fill:var(--hip-soft);stroke:currentColor" stroke-width="1.4"`;
+  const rad = d => d * Math.PI / 180;
+  const panel = (al, be, title, verdict) => {
+    const R = [96, 70], u1 = [Math.sin(rad(al)), Math.cos(rad(al))], u2 = [-Math.sin(rad(be)), Math.cos(rad(be))];
+    const roofEnd = [R[0] + 70 * u1[0], R[1] + 70 * u1[1]], lab = [R[0] + 54 * u2[0], R[1] + 54 * u2[1]];
+    const bis = [u1[0] + u2[0], u1[1] + u2[1]], bl = Math.hypot(...bis), half = rad((al + be) / 2), rh = 40, d = (rh + 3) / Math.sin(half);
+    const C = [R[0] + d * bis[0] / bl, R[1] + d * bis[1] / bl];
+    const f = v => v.toFixed(1), ext = (u, k) => [R[0] + k * u[0], R[1] + k * u[1]];
+    const [r1x, r1y] = ext(u1, 110), [c1x, c1y] = ext(u2, 78);
+    const arc = (deg1, deg2, r, sweep) => { const p = d0 => [R[0] + r * Math.cos(rad(d0)), R[1] + r * Math.sin(rad(d0))]; const [a, b] = p(deg1), [c, e] = p(deg2); return `M${f(a)} ${f(b)} A ${r} ${r} 0 0 ${sweep} ${f(c)} ${f(e)}`; };
+    return panelSvg(220, 262, `Graf ultrasound angles, ${title.toLowerCase()}`, `${AH_DEF}
+${T(110, 15, title, 12, "middle", B)}
+<g transform="translate(0 22)">
+<path d="M96 0 V ${R[1]} L ${f(roofEnd[0])} ${f(roofEnd[1])} C ${f(roofEnd[0] + 20)} ${f(roofEnd[1] - 4)}, 210 ${f(roofEnd[1] - 10)}, 214 ${f(roofEnd[1] - 14)} V 0 Z" ${BONE}/>
+<path d="M96 ${R[1]} L ${f(lab[0])} ${f(lab[1])}" style="stroke:var(--hip-soft)" stroke-width="9" stroke-linecap="round"/>
+<path d="M${f(lab[0] - 7)} ${f(lab[1] - 3)} L ${f(lab[0] + 6)} ${f(lab[1] - 5)} L ${f(lab[0] + 1)} ${f(lab[1] + 9)} Z" style="fill:var(--hip);stroke:currentColor" stroke-width="1"/>
+<circle cx="${f(C[0])}" cy="${f(C[1])}" r="${rh}" ${CART}/>
+<line x1="96" y1="0" x2="96" y2="206" ${LINE("currentColor", 1.4, "5 4")}/>
+<line x1="96" y1="${R[1]}" x2="${f(r1x)}" y2="${f(r1y)}" ${MARK(2)}/>
+<line x1="96" y1="${R[1]}" x2="${f(c1x)}" y2="${f(c1y)}" ${LINE("var(--accent)", 2)}/>
+<path d="${arc(90, 90 - al, 18, 0)}" ${LINE("var(--mark)", 1.8)}/><path d="${arc(90, 90 + be, 14, 1)}" ${LINE("var(--accent)", 1.8)}/>
+${T(f(R[0] + 95 * u1[0]), f(R[1] + 95 * u1[1] + 16), `α ${al}°`, 12, "middle", `${B} style="fill:var(--mark)"`)}
+${T(f(R[0] + 44 * u2[0] - 12 * Math.cos(rad(be))), f(R[1] + 44 * u2[1] - 12 * Math.sin(rad(be))), `β ${be}°`, 12, "middle", `${B} style="fill:var(--accent)"`)}
+${T(102, 14, "ilium", 10.5, "start", B)}${T(210, f(roofEnd[1] - 22), "bony roof", 10.5, "end")}
+<line x1="38" y1="196" x2="${f(lab[0])}" y2="${f(lab[1] + 6)}" ${LINE("currentColor", .8)}/>${T(22, 208, "labrum", 10.5, "start")}${T(f(C[0] + 8), f(C[1] + 18), "head", 10.5, "start")}
+<rect x="2" y="24" width="12" height="150" rx="3" style="fill:var(--amber-soft);stroke:currentColor" stroke-width="1.2"/>${ARROW(`M16 ${f(C[1])} H 30`, "currentColor", 1.4)}${T(2, 16, "probe", 10.5, "start")}
+${AXES(196, 196, { u: "S", d: "I", l: "L", r: "M" })}
+</g>
+${T(110, 256, verdict, 10.5, "middle")}`, 260);
+  };
+  return fig(panels(panel(64, 45, "Normal hip", "α 60° or more, β under 55°"), panel(48, 72, "Dysplastic hip", "small α, large β")),
+  "Graf coronal ultrasound of a right infant hip, drawn in the standard display: the ilium is a straight vertical line at the top (the baseline), as on an AP of a right hip, and the probe lies along the lateral side of the hip (your left), level with the ilium and the head. <b>α</b>, between the baseline and the bony roof, is normally 60° or more. <b>β</b>, between the baseline and the cartilage roof through the labrum, is normally under 55°. As α falls and β rises, dysplasia is more severe (Miller's, p. 224). Ultrasound is used before the femoral head ossifies at about 4–6 months (Miller's, p. 223). α and β describe the roof only: where the head sits, or how much of it the roof covers (femoral head coverage), is a separate measurement and is not part of the Graf angles or type. The display convention and the coverage note are not in Miller's.", 560);
+})();
+
+/* ---- Pavlik harness: side view (supine, hip flexed) and view from the feet (abduction arc) ---- */
+const FIG_PAVLIK = (() => {
+  const B = 'font-weight="700"', rad = d => d * Math.PI / 180;
+  const HIP = [176, 116], TL = 74, flex = 100;              /* thigh from the hip: flexion measured from the extended line (pointing to the feet, +x) */
+  const th = rad(-flex), knee = [HIP[0] + TL * Math.cos(th), HIP[1] + TL * Math.sin(th)];
+  const f = v => v.toFixed(1);
+  const side = panelSvg(300, 196, "Baby on their back in a Pavlik harness, side view", `
+${T(150, 15, "Side view: hip flexed about 90–100°", 12, "middle", B)}
+<path d="M10 140 H 290" ${LINE("currentColor", 1.2)}/>
+<circle cx="40" cy="112" r="20" ${BONE}/>
+<rect x="58" y="98" width="124" height="38" rx="16" ${BONE}/>
+<line x1="${HIP[0]}" y1="${HIP[1]}" x2="${f(knee[0])}" y2="${f(knee[1])}" style="stroke:var(--fig-fill)" stroke-width="22" stroke-linecap="round"/>
+<line x1="${HIP[0]}" y1="${HIP[1]}" x2="${f(knee[0])}" y2="${f(knee[1])}" ${LINE("currentColor", 1.2)} stroke-width="1"/>
+<rect x="${f(knee[0] - 8)}" y="${f(knee[1] - 10)}" width="72" height="18" rx="9" ${BONE}/>
+<rect x="${f(knee[0] + 60)}" y="${f(knee[1] - 22)}" width="13" height="28" rx="6" ${BONE}/>
+<rect x="84" y="96" width="12" height="42" rx="3" style="fill:var(--accent);fill-opacity:.55;stroke:currentColor" stroke-width="1"/>
+<rect x="${f(knee[0] + 40)}" y="${f(knee[1] - 12)}" width="10" height="22" rx="3" style="fill:var(--accent);fill-opacity:.55;stroke:currentColor" stroke-width="1"/>
+<path d="M92 98 C 120 60, ${f(knee[0] + 10)} ${f(knee[1] - 26)}, ${f(knee[0] + 45)} ${f(knee[1] - 12)}" ${LINE("var(--accent)", 2.6)}/>
+<line x1="${HIP[0]}" y1="${HIP[1]}" x2="${HIP[0] + 70}" y2="${HIP[1]}" ${LINE("currentColor", 1.2, "4 3")}/>
+<path d="M${HIP[0] + 34} ${HIP[1]} A 34 34 0 0 0 ${f(HIP[0] + 34 * Math.cos(th))} ${f(HIP[1] + 34 * Math.sin(th))}" ${LINE("var(--mark)", 1.8)}/>
+${T(HIP[0] + 38, HIP[1] - 22, "90–100°", 12, "start", `${B} style="fill:var(--mark)"`)}
+${T(150, 162, "Too much flexion → femoral nerve palsy", 10.5, "middle")}
+${AXES(270, 52, { u: "A", d: "P", l: "S", r: "I" })}`, 420);
+  const cx = 214, cy = 196, R = 118;
+  const pt = (deg, r = R) => [cx - r * Math.cos(rad(deg)), cy - r * Math.sin(rad(deg))];   /* 0 deg = full abduction (to the viewer's left), 90 = thighs together */
+  const sector = (a1, a2, r) => { const [x1, y1] = pt(a1, r), [x2, y2] = pt(a2, r); return `M${cx} ${cy} L${f(x1)} ${f(y1)} A ${r} ${r} 0 0 0 ${f(x2)} ${f(y2)} Z`; };
+  const ray = (deg, c, w = 2, dash = "") => { const [x, y] = pt(deg); return `<line x1="${cx}" y1="${cy}" x2="${f(x)}" y2="${f(y)}" ${LINE(c, w, dash)}/>`; };
+  const lab = (deg, r, txt, anchor = "end") => { const [x, y] = pt(deg, r); return T(f(x), f(y), txt, 11, anchor, B); };
+  const [tx, ty] = pt(48, R - 14);
+  const feet = panelSvg(300, 262, "Right hip abduction safe zone seen from the feet", `
+${T(150, 15, "From the feet: safe zone of Ramsey", 12, "middle", B)}
+<path d="${sector(90, 65, R)}" style="fill:var(--bad);fill-opacity:.18"/>
+<path d="${sector(65, 30, R)}" style="fill:var(--good);fill-opacity:.4"/>
+<path d="${sector(30, 0, R)}" style="fill:var(--bad);fill-opacity:.18"/>
+${ray(90, "var(--muted)", 1.2, "4 3")}${ray(65, "var(--good)", 2)}${ray(30, "var(--good)", 2)}${ray(0, "var(--muted)", 1.2, "4 3")}
+<line x1="${cx}" y1="${cy}" x2="${f(tx)}" y2="${f(ty)}" style="stroke:var(--fig-fill)" stroke-width="16" stroke-linecap="round"/><line x1="${cx}" y1="${cy}" x2="${f(tx)}" y2="${f(ty)}" ${LINE("currentColor", 1)}/>
+<rect x="${cx - 6}" y="${cy - 6}" width="80" height="24" rx="10" ${BONE}/>
+${T(cx + 38, cy + 10, "Pelvis", 10.5, "middle")}
+${T(cx + 6, 70, "Thighs together", 10.5, "start")}
+${lab(78, R + 8, "Redislocates", "end")}${lab(48, R + 8, "Safe zone")}${lab(14, R + 6, "AVN risk")}
+${T(cx - R, cy + 18, "Full frog", 10.5, "start")}
+${T(150, 240, "Hold the hip inside the green arc.", 10.5, "middle")}${T(150, 254, "Arc under about 40° wide → consider adductor tenotomy.", 10.5, "middle")}
+${AXES(40, 52, { u: "A", d: "P", l: "R", r: "L" })}`, 420);
+  return fig(panels(side, feet),
+  "Pavlik harness on a baby lying on their back (right hip shown; straps in green, drawn unlabelled). It holds the hip flexed, usually about 90–100° (the exact angle varies with local protocol; not in Miller's), with gentle abduction inside the safe zone of Ramsey: the arc between the angle where the hip redislocates in adduction and the forced abduction that risks AVN. Too much flexion risks femoral nerve palsy. Angles are illustrative; the zone is measured for each child (Miller's, p. 225). The view from the feet follows the CT convention (patient's right on your left).", 440);
+})();
+
+/* ---- 1. Infant AP pelvis: Hilgenreiner, Perkin, Shenton, acetabular index (radiograph convention: patient's right on the viewer's left) ---- */
 const FIG_HIP = (() => {
-  const half = (flip) => `<g ${flip ? 'transform="translate(420 0) scale(-1 1)"' : ""}>
-<path d="M200 46 C 172 22, 112 20, 70 42 C 60 62, 66 96, 80 112 C 94 116, 108 123, 121 130 C 140 120, 170 108, 200 104 Z" ${BONE}/>
-<path d="M124 141 C 110 152, 104 172, 112 196 C 120 220, 142 230, 162 222 C 175 214, 182 202, 200 198 L 200 176 C 182 172, 160 158, 138 147 Z" ${BONE}/>
-<ellipse cx="154" cy="194" rx="15" ry="11" style="fill:var(--panel);stroke:currentColor" stroke-width="1.2"/>
+  const TRI = [104, 130];                 /* triradiate cartilage point on the patient's right (viewer's left) */
+  /* one hemipelvis, drawn for the patient's RIGHT side; edgeY = height of the lateral acetabular edge */
+  const hemi = (edgeY) => `
+<path d="M138 44 C 122 26, 66 22, 42 40 C 30 56, 42 82, 58 98 C 66 106, 72 ${edgeY - 4}, 76 ${edgeY} L 103 126 L 107 124 C 114 112, 126 94, 134 80 C 137 66, 138 52, 138 40 Z" ${BONE}/>
+<path d="M104 136 L 112 134 C 126 136, 140 140, 152 144 L 153 176 C 140 184, 126 196, 108 198 C 96 198, 90 186, 92 170 C 94 156, 96 144, 104 136 Z" ${BONE}/>
+<ellipse cx="124" cy="167" rx="12" ry="16" style="fill:var(--panel);stroke:currentColor" stroke-width="1.2"/>`;
+  const sacrum = `<path d="M142 36 L 178 36 L 170 110 Q 160 122 150 110 Z" ${BONE}/>
+<path d="M146 58 H174 M148 80 H172 M150 100 H170" ${LINE("currentColor", .8)}/>`;
+  /* proximal femur (patient's right): metaphysis + shaft, cartilage head (dashed), ossific nucleus */
+  const femur = (dx, dy, nucR, nucCol) => `<g transform="translate(${dx} ${dy})">
+<path d="M70 146 C 80 152, 94 156, 104 157 C 103 166, 97 172, 95 184 L 95 252 L 73 252 L 73 186 C 71 172, 67 158, 70 146 Z" ${BONE}/>
+<circle cx="91" cy="138" r="16" ${SOFT}/>
+<circle cx="92" cy="140" r="${nucR}" style="fill:${nucCol};fill-opacity:.7;stroke:currentColor" stroke-width="1.2"/></g>`;
+  /* Shenton line: medial neck, then the lower border of the superior pubic ramus (top of the obturator foramen) */
+  const shentonNeck = (dx, dy, c) => `<path d="M${95 + dx} ${196 + dy} C ${96 + dx} ${180 + dy}, ${100 + dx} ${166 + dy}, ${106 + dx} ${158 + dy}" ${LINE(c, 2.4)}/>`;
+  const shentonPubis = (c) => `<path d="M106 158 C 112 152, 118 150, 126 150.5 C 134 151, 140 153, 146 156" ${LINE(c, 2.4)}/>`;
+  const R_EDGE = 120, L_EDGE = 106;      /* normal vs dysplastic roof */
+  const mirror = s => `<g transform="translate(320 0) scale(-1 1)">${s}</g>`;
+  const H = 130;
+  const quad = `<rect x="76" y="${H}" width="30" height="26" style="fill:var(--good);fill-opacity:.16"/>`;
+  const aiArc = (edgeY) => { const a = Math.atan2(TRI[1] - edgeY, TRI[0] - 76), r = 22;
+    return `<line x1="${TRI[0]}" y1="${TRI[1]}" x2="76" y2="${edgeY}" ${LINE("var(--accent)", 2)}/><path d="M${TRI[0] - r} ${TRI[1]} A ${r} ${r} 0 0 1 ${(TRI[0] - r * Math.cos(a)).toFixed(1)} ${(TRI[1] - r * Math.sin(a)).toFixed(1)}" ${LINE("var(--accent)", 1.6)}/>`; };
+  const drawing = `<g transform="translate(0 24)">
+${sacrum}${hemi(R_EDGE)}${mirror(hemi(L_EDGE))}
+${quad}
+${femur(0, 0, 6.5, "var(--good)")}${mirror(femur(-28, -26, 4, "var(--bad)"))}
+${shentonNeck(0, 0, "var(--good)")}${shentonPubis("var(--good)")}
+${mirror(shentonNeck(-28, -26, "var(--bad)") + shentonPubis("var(--bad)"))}
+<line x1="6" y1="${H}" x2="314" y2="${H}" ${MARK(1.8)}/>
+<line x1="76" y1="78" x2="76" y2="212" ${MARK(1.8, "6 4")}/><line x1="244" y1="70" x2="244" y2="212" ${MARK(1.8, "6 4")}/>
+${aiArc(R_EDGE)}${mirror(aiArc(L_EDGE))}
 </g>`;
-  const sacrum = `<path d="M200 46 C 206 40, 214 40, 220 46 L 220 150 C 214 160, 206 160, 200 150 Z" ${BONE}/>`;
-  // normal (viewer left = patient's right)
-  const femL = `<path d="M78 170 L108 162 C 110 177, 104 187, 101 200 L 101 252 L 77 252 L 77 200 C 75 188, 75 178, 78 170 Z" ${BONE}/>
-<circle cx="99" cy="146" r="19" ${SOFT}/><circle cx="99" cy="147" r="8" style="fill:var(--good);fill-opacity:.65;stroke:currentColor" stroke-width="1.2"/>`;
-  // dislocated (viewer right): femur moved up and out
-  const femR = `<path d="M372 136 L342 128 C 340 143, 346 153, 349 166 L 349 252 L 373 252 L 373 166 C 375 154, 375 144, 372 136 Z" ${BONE}/>
-<circle cx="352" cy="112" r="18" ${SOFT}/><circle cx="352" cy="113" r="5.5" style="fill:var(--bad);fill-opacity:.65;stroke:currentColor" stroke-width="1.2"/>`;
-  const H = `<line x1="20" y1="133" x2="400" y2="133" ${MARK(1.8)}/>`;
-  const P = `<line x1="80" y1="60" x2="80" y2="255" ${MARK(1.8, "6 4")}/><line x1="340" y1="60" x2="340" y2="255" ${MARK(1.8, "6 4")}/>`;
-  const AI = `<line x1="121" y1="131" x2="72" y2="108" ${LINE("var(--accent)", 1.8)}/><path d="M104 133 A 18 18 0 0 0 105 124" ${LINE("var(--accent)", 1.5)}/>
-<line x1="299" y1="131" x2="340" y2="104" ${LINE("var(--accent)", 1.8)}/><path d="M316 133 A 18 18 0 0 1 315 121" ${LINE("var(--accent)", 1.5)}/>`;
-  const shenton = `<path d="M103 214 C 104 192, 112 178, 138 179 C 150 179, 160 181, 170 186" ${LINE("var(--good)", 2.2)}/>
-<path d="M346 176 C 345 160, 340 150, 334 145" ${LINE("var(--bad)", 2.2)}/><path d="M282 179 C 270 179, 260 181, 250 186" ${LINE("var(--bad)", 2.2)}/>
-<path d="M326 168 l10 -10 M326 158 l10 10" ${LINE("var(--bad)", 1.8)}/>`;
-  const labels = T(110, 20, "Normal hip", 12, "middle", 'font-weight="700"') + T(310, 20, "Dislocated hip", 12, "middle", 'font-weight="700"') +
-    T(24, 127, "H", 11, "start", 'font-weight="700"') + T(84, 72, "P", 11, "start", 'font-weight="700"') + T(344, 72, "P", 11, "start", 'font-weight="700"') +
-    T(112, 123, "AI", 9, "end", 'font-weight="700"') + T(308, 123, "AI", 9, "start", 'font-weight="700"') +
-    T(140, 172, "S", 11, "middle", 'font-weight="700"') + T(268, 172, "S", 11, "middle", 'font-weight="700"');
-  return fig(`<svg viewBox="0 0 420 270" role="img" aria-label="Infant pelvis with Hilgenreiner, Perkin and Shenton lines and acetabular index">
-${half(false)}${half(true)}${sacrum}${femL}${femR}${H}${P}${AI}${shenton}${labels}</svg>`,
-  "Infant AP pelvis. <b>H</b> Hilgenreiner line through both triradiate cartilages. <b>P</b> Perkin line, dropped from the lateral edge of each acetabulum. The ossific nucleus should sit in the lower inner quadrant (green); a dislocated one sits upper outer (red) and is often smaller. <b>S</b> Shenton line: a smooth arc from the femoral neck to the pubic ramus, broken on the dislocated side. <b>AI</b> acetabular index: steeper on the dysplastic side (normal under about 25°; Miller's, p. 224).", 440);
+  const B = 'font-weight="700"';
+  const labels = T(80, 14, "Normal right hip", 11.5, "middle", B) + T(240, 14, "Dislocated left hip", 11.5, "middle", B) +
+    T(6, H + 24 - 5, "H", 12, "start", B) + T(70, 104, "P", 12, "end", B) + T(250, 96, "P", 12, "start", B) +
+    T(64, 150, "AI", 11, "end", `${B} style="fill:var(--accent)"`) + T(212, 174, "AI", 11, "end", `${B} style="fill:var(--accent)"`) +
+    T(102, 236, "S", 12, "start", `${B} style="fill:var(--good)"`) + T(280, 200, "S", 12, "start", `${B} style="fill:var(--bad)"`) +
+    `<path d="M222 186 l8 -8 M222 178 l8 8" ${LINE("var(--bad)", 1.8)}/>` +
+    AXES(160, 262, { u: "S", d: "I", l: "R", r: "L" }, 11);
+  return fig(`<svg viewBox="0 0 320 292" role="img" aria-label="Infant AP pelvis with Hilgenreiner, Perkin and Shenton lines and the acetabular index; right hip normal, left hip dislocated">
+${drawing}${labels}</svg>`,
+  "Infant AP pelvis (patient's right on your left). <b>H</b>, Hilgenreiner line, runs through both triradiate cartilages. <b>P</b>, Perkin line, drops from the lateral edge of each acetabular roof. Together they make four quadrants, and the ossific nucleus of a located head sits in the lower inner one (green). On the dislocated left hip the nucleus is smaller and sits upper and outer. <b>S</b>, Shenton line, is a smooth arc from the femoral neck to the pubic ramus and is broken on the dislocated side. <b>AI</b>, the acetabular index, is steeper on the dysplastic side. There is no single normal value: the AI falls with age and differs between girls and boys, so it is judged against age- and sex-corrected normative values, such as those of Tönnis or Novais (not in Miller's). Rough rules: under 25° on films after about 4 months (Miller's, p. 224); under 30° in newborns, average 27.5° (Netter's, p. 279).", 420);
 })();
 
 /* ---- 2. Parts of a growing bone + SCFE ---- */
-const FIG_LONGBONE = fig(`<svg viewBox="0 0 440 300" role="img" aria-label="Parts of the child's proximal femur, normal and SCFE">${AH_DEF}
+const FIG_LONGBONE = fig(`<svg viewBox="0 0 440 316" role="img" aria-label="Parts of the child's proximal femur, normal and SCFE">${AH_DEF}
 ${T(110, 22, "Normal", 12, "middle", 'font-weight="700"')}${T(370, 22, "SCFE", 12, "middle", 'font-weight="700"')}
 ${femur(90, 60, { s: 1.1, len: 190 })}
 <path d="M165 66 L200 52" ${LINE()}/>${T(204, 50, "Epiphysis", 11, "start", 'font-weight="700"')}${T(204, 63, "(femoral head)", 10)}
@@ -507,8 +637,9 @@ ${femur(90, 60, { s: 1.1, len: 190 })}
 ${femur(330, 60, { s: 1.1, len: 190, capShift: SLIP })}
 <path d="${FEMUR_CAP}" transform="translate(330 60) scale(1.1)" ${SOFT}/>
 ${ARROW("M378 64 L 388 86", "var(--bad)", 2)}
-${T(370, 274, "Head slips down and back", 10, "middle")}${T(370, 287, "through the physis", 10, "middle")}
-</svg>`, "Child's proximal femur, AP view. In SCFE the epiphysis stays in the socket while the neck moves up, forward and into external rotation, so on the AP film the head looks as if it has slid down and back off the neck (dashed = normal position). The slip happens through the hypertrophic zone of the physis (Miller's, p. 229).", 440);
+${T(370, 290, "Head slips down and back", 10, "middle")}${T(370, 303, "through the physis", 10, "middle")}
+${AXES(30, 190, { u: "S", d: "I", l: "L", r: "M" })}
+</svg>`, "Child's right proximal femur, AP view (lateral on your left). In SCFE the epiphysis stays in the socket while the neck moves up, forward and into external rotation, so on the AP film the head looks as if it has slid down and back off the neck (dashed = normal position). The slip happens through the hypertrophic zone of the physis (Miller's, p. 229).", 440);
 
 /* ---- 3. Blood supply (posterior view, right hip: medial is on the viewer's left) ---- */
 const FIG_BLOOD = fig(`<svg viewBox="0 0 440 312" role="img" aria-label="Blood supply to the child's femoral head, posterior view">
@@ -517,26 +648,14 @@ ${femur(250, 60, { s: 1.5, flip: true, len: 150 })}
 <path d="M30 270 C 100 258, 170 238, 205 204 C 228 182, 246 150, 256 118" ${LINE("var(--bad)", 3.2)}/>
 <path d="M256 118 C 242 98, 224 84, 203 76 M252 128 C 238 112, 222 100, 206 93 M203 76 L 188 70 M206 93 L 191 92" ${LINE("var(--bad)", 2)}/>
 <path d="M131 94 L 96 100" ${LINE("var(--bad)", 1.4, "3 3")}/>
-${T(30, 304, "Medial femoral circumflex artery: wraps behind the neck", 10.5, "start", 'font-weight="700"')}
-<path d="M300 44 L 236 88" ${LINE()}/>${T(304, 34, "Retinacular (lateral", 10.5, "start", 'font-weight="700"')}${T(304, 47, "epiphyseal) vessels:", 10.5, "start", 'font-weight="700"')}${T(304, 60, "climb the back of the", 10)}${T(304, 73, "neck inside the capsule;", 10)}${T(304, 86, "main supply to the head", 10)}
-${T(14, 90, "Ligamentum teres", 10)}${T(14, 103, "artery: small,", 10)}${T(14, 116, "variable", 10)}
+<path d="M84 292 L 84 264" ${LINE()}/>${T(30, 304, "Medial femoral circumflex artery: wraps behind the neck", 10.5, "start", 'font-weight="700"')}
+<path d="M300 44 L 238 96" ${LINE()}/>${T(304, 34, "Retinacular (lateral", 10.5, "start", 'font-weight="700"')}${T(304, 47, "epiphyseal) vessels:", 10.5, "start", 'font-weight="700"')}${T(304, 60, "climb the back of the", 10)}${T(304, 73, "neck inside the capsule;", 10)}${T(304, 86, "main supply to the head", 10)}
+${T(14, 90, "Ligamentum teres", 10)}${T(14, 103, "artery: small,", 10)}${T(14, 116, "variable", 10)}<path d="M80 100 L 95 100" ${LINE()}/>
+${AXES(40, 175, { u: "S", d: "I", l: "M", r: "L" })}
 <path d="M310 150 L 274 136" ${LINE()}/>${T(314, 154, "Capsule", 10)}
 ${T(14, 22, "Posterior view, right hip", 10)}
 </svg>`, "Schematic, posterior view. The head's main supply climbs the back of the neck inside the joint capsule, so a tense effusion (septic hip), forced abduction (Pavlik) or a displaced unstable SCFE can cut it off and cause AVN (Miller's, p. 225; Netter's, p. 245).", 440);
 
-/* ---- 4. LCEA (older child; lateral is on the viewer's left) ---- */
-const FIG_LCEA = fig(`<svg viewBox="0 0 380 290" role="img" aria-label="Lateral centre-edge angle">
-<path d="M210 63.3 A 47 47 0 0 1 280.5 104 C 290 80, 300 50, 330 30 L 330 10 L 180 10 C 178 36, 192 58, 210 63.3 Z" ${BONE}/>
-${femur(140, 70, { s: 1.7, len: 110 })}
-${DOT(233.5, 104)}
-<line x1="233.5" y1="104" x2="233.5" y2="4" ${MARK(1.8, "6 4")}/>
-<line x1="233.5" y1="104" x2="210" y2="63.3" ${MARK(1.8)}/>
-<path d="M233.5 74 A 30 30 0 0 0 218.5 78" ${LINE("var(--mark)", 1.6)}/>
-${T(214, 96, "LCEA", 11, "end", 'font-weight="700"')}
-<path d="M206 60 L 150 44" ${LINE()}/>${T(146, 40, "Lateral edge of", 10, "end")}${T(146, 53, "the acetabular roof", 10, "end")}
-${T(240, 24, "Vertical through head centre", 10)}
-${T(20, 282, "Under 20° = dysplasia · 20–25° = borderline", 11, "start", 'font-weight="700"')}
-</svg>`, "Lateral centre-edge angle (Wiberg) on an AP pelvis, right hip (lateral on the left): the angle between a vertical line through the centre of the femoral head and a line to the lateral edge of the acetabular roof. Used once the head is well ossified (older children and adolescents).", 380);
 
 /* ---- 5. Klein line ---- */
 const kleinLine = `<line x1="-30" y1="48.8" x2="95" y2="-28" style="stroke:var(--mark)" stroke-width="2" stroke-dasharray="6 4" vector-effect="non-scaling-stroke"/>`;
@@ -545,8 +664,9 @@ ${T(110, 22, "Normal", 12, "middle", 'font-weight="700"')}${T(330, 22, "SCFE", 1
 ${femur(70, 80, { s: 1.5, len: 120, extra: kleinLine })}
 ${femur(290, 80, { s: 1.5, len: 120, capShift: SLIP, extra: kleinLine })}
 ${T(110, 276, "Line along the top of the neck", 10, "middle")}${T(110, 289, "cuts through the lateral head", 10, "middle")}
+${AXES(222, 196, { u: "S", d: "I", l: "L", r: "M" })}
 ${T(330, 276, "Line misses the head", 10, "middle")}${T(330, 289, "(Trethowan sign)", 10, "middle")}
-</svg>`, "Klein line is drawn along the superior border of the femoral neck on the AP film. Normally it passes through part of the epiphysis; in SCFE the slipped head lies entirely below it (Miller's, p. 230). Mild slips can look normal on the AP, so always get a frog-leg lateral.", 440);
+</svg>`, "Right hip, AP view (lateral on your left). Klein line is drawn along the superior border of the femoral neck on the AP film. Normally it passes through part of the epiphysis; in SCFE the slipped head lies entirely below it (Miller's, p. 230). Mild slips can look normal on the AP, so always get a frog-leg lateral.", 440);
 
 /* ---- 6. Lateral pillar ---- */
 const FIG_PILLAR = (() => {
@@ -554,114 +674,123 @@ const FIG_PILLAR = (() => {
   const panel = (x, g, f, txt) => {
     const id = "pc" + g;
     const lateralTop = 70 - 60 * f;
-    return `<g transform="translate(${x} 40)">
+    return `<g transform="translate(${x} 40)"><g transform="translate(140 0) scale(-1 1)">
 <defs><clipPath id="${id}"><path d="${dome}"/></clipPath></defs>
-<path d="M2 66 C 20 0, 120 0, 138 66" ${LINE("currentColor", 1.6)}/>
 <path d="${dome}" transform="translate(0 6)" ${SOFT}/>
 <g clip-path="url(#${id})" transform="translate(0 6)">
 <rect x="35" y="0" width="70" height="70" ${BONE}/>
-<path d="M50 70 V 30 M75 70 V 22 M90 70 V 36" ${LINE("currentColor", 1, "2 3")}/>
 <rect x="105" y="${lateralTop}" width="25" height="${70 - lateralTop}" style="fill:var(--accent);fill-opacity:.55;stroke:currentColor" stroke-width="1.2"/>
 <rect x="10" y="0" width="25" height="70" ${BONE}/>
 </g>
 <path d="M0 78 H140" ${LINE("var(--accent)", 3)}/>
-<path d="M20 78 C 22 110, 30 140, 34 160 M120 78 C 116 105, 112 130, 110 160" ${LINE("currentColor", 1.4)}/>
+<path d="M20 78 C 22 110, 30 140, 34 160 M120 78 C 116 105, 112 130, 110 160" ${LINE("currentColor", 1.4)}/></g>
 ${T(70, 182, g, 16, "middle", 'font-weight="700"')}${T(70, 198, txt, 10, "middle")}
 </g>`;
   };
   return fig(`<svg viewBox="0 0 480 250" role="img" aria-label="Herring lateral pillar classification">
-${T(30, 22, "Medial", 10, "middle")}${T(150, 22, "Lateral", 10, "middle")}
+${AXES(240, 20, { l: "L", r: "M" })}
 ${panel(20, "A", 1, "full height")}${panel(170, "B", 0.65, "over 50% height")}${panel(320, "C", 0.35, "under 50% height")}
-</svg>`, "Herring lateral pillar classification, AP view of the femoral head during fragmentation. The head is split into medial, central and lateral pillars; the lateral pillar (teal, outer 15–30% of the head) is graded by how much of its height is preserved (dashed = original outline). B/C sits on the 50% border (Miller's, p. 229).", 480);
+</svg>`, "Herring lateral pillar classification, AP view of the right femoral head during fragmentation (lateral on your left). The head is split into medial, central and lateral pillars; the lateral pillar (teal, outer 15–30% of the head) is graded by how much of its height is preserved (dashed = original outline). B/C sits on the 50% border (Miller's, p. 229).", 480);
 })();
 
-/* ---- 7. Migration percentage (lateral on the viewer's left) ---- */
-const FIG_MP = fig(`<svg viewBox="0 0 420 290" role="img" aria-label="Reimers migration percentage">
-<path d="M239 78 C 252 66, 280 58, 300 62 L 330 72 L 330 20 L 200 20 C 205 44, 224 70, 239 78 Z" ${BONE}/>
-${femur(150, 80, { s: 1.7, len: 100 })}
-<line x1="20" y1="118" x2="400" y2="118" ${MARK(1.6)}/>${T(24, 112, "Hilgenreiner", 10)}
-<line x1="239.4" y1="10" x2="239.4" y2="260" ${MARK(1.8, "6 4")}/>${T(244, 14, "Perkin line", 10)}
-<line x1="202.7" y1="140" x2="202.7" y2="196" ${LINE("currentColor", 1, "2 3")}/><line x1="284.3" y1="140" x2="284.3" y2="196" ${LINE("currentColor", 1, "2 3")}/>
-<path d="M202.7 192 H284.3" ${LINE()}/><path d="M202.7 186 v12 M284.3 186 v12" ${LINE()}/>${T(243.5, 212, "B = whole head width", 10, "middle")}
-<path d="M202.7 172 H239.4" ${LINE("var(--bad)", 3.5)}/>${T(196, 168, "A = part outside", 10, "end")}${T(196, 181, "Perkin line", 10, "end")}
-${T(20, 280, "MP = A ÷ B × 100", 13, "start", MONO)}
-</svg>`, "Reimers migration percentage on an AP pelvis, right hip (lateral on the left): the share of the femoral head width lying lateral to Perkin line, both measured parallel to Hilgenreiner line. Here about 45%. Over 30% → refer; over 50% → reconstruct (if the head is still healthy).", 420);
 
-/* ---- NEW 8. Barlow and Ortolani ---- */
+/* ---- 8. Barlow and Ortolani (axial, CT convention: viewed from the feet; anterior up, medial on the left for a right hip) ---- */
 const FIG_BARLOW = (() => {
-  const cup = `<path d="M170 92 A 34 34 0 1 1 170 148" ${LINE("currentColor", 3)}/>`;
-  const thigh = (hx, hy) => `<path d="M${hx} ${hy - 7} L ${hx + 24} ${hy - 9} L ${hx + 28} ${hy - 100} L ${hx + 44} ${hy - 100} L ${hx + 40} ${hy + 8} L ${hx} ${hy + 8} Z" ${BONE}/>`;
-  const panel = (x, title, sub, reduced, arrows, note) => `<g transform="translate(${x} 0)">
-${T(150, 20, title, 13, "middle", 'font-weight="700"')}${T(150, 36, sub, 10, "middle")}
-<g transform="translate(0 30)">${T(96, 124, "Medial", 9, "end")}${T(60, 60, "↑ Anterior", 9, "middle")}
-${cup}
-${reduced ? `<circle cx="150" cy="120" r="22" ${SOFT}/>${thigh(178, 178)}<circle cx="178" cy="178" r="22" ${BONE}/>` : `<circle cx="178" cy="178" r="22" ${SOFT}/>${thigh(150, 120)}<circle cx="150" cy="120" r="22" ${BONE}/>`}
-${arrows}${T(150, 256, note, 10, "middle")}
-</g></g>`;
-  return fig(`<svg viewBox="0 0 600 300" role="img" aria-label="Barlow and Ortolani manoeuvres seen from above">${AH_DEF}
-${panel(0, "Barlow: pushes it out", "Hip flexed 90°, adduct + push backward", true, ARROW("M122 136 C 132 160, 146 174, 156 180", "var(--bad)"), "A located hip that slips out = dislocatable")}
-${panel(300, "Ortolani: clunks it back in", "Hip flexed 90°, abduct + lift the trochanter", false, ARROW("M206 200 C 200 176, 190 158, 172 140", "var(--good)"), "A dislocated hip that reduces = Ortolani positive")}
-</svg>`, "Schematic view from above of a right hip flexed to 90° (anterior is up; the thigh points toward the ceiling). Barlow tests whether a located hip can be pushed out over the back rim of the socket; Ortolani tests whether a dislocated hip can be lifted back in. Dashed circle = where the head started. Both are reliable only in the first few months, before stiffness develops.", 560);
+  const R = 22, RS = 26; /* head radius, socket radius */
+  const pt = (cx, cy, r, deg) => [cx + r * Math.cos(deg * Math.PI / 180), cy + r * Math.sin(deg * Math.PI / 180)].map(v => +v.toFixed(1));
+  const ANT = -82, POST = 58; /* rim angles: 0 = lateral, -90 = anterior */
+  const CART = `style="fill:var(--hip-soft);stroke:currentColor" stroke-width="1.4"`;
+  const LAB = `style="fill:var(--hip);stroke:currentColor" stroke-width="1"`;
+  /* pelvis cut axially: pubis (anterior column) and ischium (posterior column), socket opening laterally */
+  const pelvis = (cx, cy) => {
+    const [ax, ay] = pt(cx, cy, RS, ANT), [px, py] = pt(cx, cy, RS, POST);
+    const [aox, aoy] = pt(cx, cy, RS + 16, ANT - 4), [pox, poy] = pt(cx, cy, RS + 16, POST + 6);
+    /* anterior column runs anteromedially toward the pubis, thin quadrilateral plate forms the medial wall, posterior column runs posteromedially toward the ischium */
+    const d = `M${ax} ${ay} L${aox} ${aoy} C ${cx - 14} ${cy - 50}, ${cx - 44} ${cy - 66}, ${cx - 70} ${cy - 84} L${cx - 82} ${cy - 70} C ${cx - 62} ${cy - 54}, ${cx - 44} ${cy - 34}, ${cx - 40} ${cy - 12} C ${cx - 40} ${cy + 8}, ${cx - 50} ${cy + 34}, ${cx - 70} ${cy + 66} L${cx - 54} ${cy + 80} C ${cx - 30} ${cy + 66}, ${cx - 2} ${cy + 54}, ${pox} ${poy} L${px} ${py} A ${RS} ${RS} 0 1 0 ${ax} ${ay} Z`;
+    const lab = (deg, dir) => { const [x1, y1] = pt(cx, cy, RS, deg), [x2, y2] = pt(cx, cy, RS + 8, deg), [x3, y3] = pt(cx, cy, RS, deg + dir * 18); return `<path d="M${x1} ${y1} L${x2} ${y2} L${x3} ${y3} Z" ${LAB}/>`; };
+    return `<path d="${d}" ${BONE}/>${lab(ANT, 1)}${lab(POST, -1)}`;
+  };
+  /* femur with hip and knee flexed 90 deg: shaft runs anteriorly (up the page), neck runs from the shaft back and medially to the head */
+  const femur = (hx, hy, rot, ghost) => {
+    const st = ghost ? SOFT : BONE, hs = ghost ? SOFT : CART;
+    const body = `<path d="M-4.9 -7.6 L 29 -29.6 L 29 -120 L 53 -120 L 53 -40 C 62 -36, 64 -20, 58 -12 C 52 -6, 44 -8, 39 -14.4 L 4.9 7.6 Z" ${st}/>`;
+    const gt = ghost ? "" : `<path d="M53 -40 C 50 -30, 48 -20, 44 -12" ${LINE("currentColor", .8, "2 2")}/>`;
+    return `<g transform="translate(${hx} ${hy}) rotate(${rot})">${body}${gt}<circle cx="0" cy="0" r="${R}" ${hs}/></g>`;
+  };
+  const compass = (x, y) => `<g ${FONT} font-size="9" fill="currentColor" text-anchor="middle"><path d="M${x} ${y - 14} V${y + 14} M${x - 14} ${y} H${x + 14}" ${LINE("currentColor", 1)}/><text x="${x}" y="${y - 17}">A</text><text x="${x}" y="${y + 24}">P</text><text x="${x - 19}" y="${y + 3}">M</text><text x="${x + 19}" y="${y + 3}">L</text></g>`;
+  /* orientation inset: baby lying on their back, hip and knee at 90 deg, seen from the side */
+  const inset = `<svg viewBox="0 0 300 148" role="img" aria-label="Baby lying on their back with hip and knee flexed to 90 degrees, showing the slice plane" style="flex:1 1 100%;max-width:420px">${AH_DEF}
+${T(150, 14, "Where the slice is taken", 12, "middle", 'font-weight="700"')}
+<path d="M14 122 H 286" ${LINE("currentColor", 1.2)}/>
+<circle cx="44" cy="100" r="18" ${BONE}/>
+<rect x="62" y="88" width="104" height="32" rx="14" ${BONE}/>
+<rect x="148" y="40" width="24" height="68" rx="11" ${BONE}/>
+<rect x="152" y="36" width="80" height="20" rx="10" ${BONE}/>
+<rect x="226" y="26" width="14" height="30" rx="6" ${BONE}/>
+<path d="M160 26 V 128" ${MARK(1.8, "6 4")}/>
+<circle cx="164" cy="100" r="5" style="fill:var(--amber-soft);stroke:currentColor" stroke-width="1"/>
+<path d="M270 78 q 10 -8 20 0 q -10 8 -20 0 Z" ${LINE("currentColor", 1.2)}/><circle cx="276" cy="78" r="2.6" fill="currentColor"/>
+${ARROW("M264 78 H 248", "currentColor", 1.4)}${T(290, 96, "Viewed from", 9, "end")}${T(290, 107, "the feet", 9, "end")}
+${T(154, 32, "Slice", 9, "end")}
+${T(100, 80, "Hip + knee at 90°", 9, "middle")}
+<path d="M167 104 L 178 134" ${LINE("currentColor", .8)}/>${T(176, 144, "Finger on greater trochanter", 9, "start")}
+</svg>`;
+  const CX = 112, CY = 205; /* socket centre inside each panel */
+  const OUT = [CX + 44, CY + 40]; /* head position when dislocated, behind the posterior rim */
+  /* labels on the Barlow panel only */
+  const labels = `
+${T(CX - 100, CY - 92, "To pubis", 9, "start")}${T(CX - 96, CY + 96, "To ischium", 9, "start")}${T(CX - 46, CY + 2, "Medial", 9, "end")}${T(CX - 46, CY + 13, "wall", 9, "end")}
+<path d="M${CX + 3} ${CY - 31} L ${CX - 14} ${CY - 106}" ${LINE("currentColor", .8)}/>${T(CX - 14, CY - 110, "Anterior rim + labrum", 9, "middle")}
+<path d="M${CX + 17} ${CY + 27} L ${CX + 14} ${CY + 102}" ${LINE("currentColor", .8)}/>${T(CX + 14, CY + 112, "Posterior rim + labrum", 9, "middle")}
+<path d="M${OUT[0] + 18} ${OUT[1] + 12} L ${OUT[0] + 44} ${OUT[1] + 34}" ${LINE("currentColor", .8)}/>${T(OUT[0] + 46, OUT[1] + 40, "Head (cartilage)", 9, "start")}
+<path d="M${CX + 112} ${CY + 10} L ${OUT[0] + 64} ${OUT[1] - 34}" ${LINE("currentColor", .8)}/>${T(CX + 114, CY + 8, "Greater", 9, "start")}${T(CX + 114, CY + 19, "trochanter", 9, "start")}
+${T(CX + 22, CY - 140, "Shaft (toward the knee)", 9, "middle")}`;
+  const barlow = `<svg viewBox="0 0 300 352" role="img" aria-label="Barlow manoeuvre on an axial slice of a right infant hip" style="flex:1 1 280px;max-width:320px">${AH_DEF}
+${T(150, 18, "Barlow: pushes it out", 13, "middle", 'font-weight="700"')}${T(150, 33, "Adduct + gentle push toward the table", 10, "middle")}
+${pelvis(CX, CY)}
+${femur(CX, CY, 0, true)}${femur(OUT[0], OUT[1], -14, false)}
+${ARROW(`M${CX + 86} ${CY - 92} C ${CX + 78} ${CY - 108}, ${CX + 62} ${CY - 112}, ${CX + 46} ${CY - 106}`, "var(--bad)")}${T(CX + 90, CY - 92, "adduct", 9)}
+${ARROW(`M${CX + 108} ${CY - 70} V ${CY - 30}`, "var(--bad)")}${T(CX + 114, CY - 56, "push toward", 9)}${T(CX + 114, CY - 45, "the table", 9)}
+${compass(258, 70)}
+${T(150, 330, "A located hip slips out over", 10, "middle")}${T(150, 343, "the posterior rim = dislocatable", 10, "middle")}
+${labels}</svg>`;
+  const ortolani = `<svg viewBox="0 0 300 352" role="img" aria-label="Ortolani manoeuvre on an axial slice of a right infant hip" style="flex:1 1 280px;max-width:320px">${AH_DEF}
+${T(150, 18, "Ortolani: clunks it back in", 13, "middle", 'font-weight="700"')}${T(150, 33, "Abduct + lift the greater trochanter", 10, "middle")}
+${pelvis(CX, CY)}
+${femur(OUT[0], OUT[1], -14, true)}${femur(CX, CY, 14, false)}
+${ARROW(`M${CX + 50} ${CY - 132} C ${CX + 66} ${CY - 138}, ${CX + 84} ${CY - 132}, ${CX + 92} ${CY - 118}`, "var(--good)")}${T(CX + 96, CY - 118, "abduct", 9)}
+<rect x="${CX + 68}" y="${CY + 2}" width="13" height="28" rx="6.5" style="fill:var(--amber-soft);stroke:currentColor" stroke-width="1.2"/>
+${ARROW(`M${CX + 92} ${CY + 30} V ${CY - 2}`, "var(--good)")}${T(CX + 98, CY + 18, "lift", 9)}
+${T(CX + 110, CY + 50, "Examiner's middle", 9, "middle")}${T(CX + 110, CY + 61, "finger behind the", 9, "middle")}${T(CX + 110, CY + 72, "greater trochanter", 9, "middle")}
+${compass(258, 70)}
+${T(150, 330, "A dislocated hip lifts back over", 10, "middle")}${T(150, 343, "the rim with a clunk = Ortolani positive", 10, "middle")}
+</svg>`;
+  return fig(`<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:4px 0">${inset}${barlow}${ortolani}</div>`, "Axial slice through a right infant hip, viewed from the feet as on CT (anterior up, medial on the left), with the hip and knee flexed to 90°, so the femoral shaft points up toward the ceiling. Dashed outline = where the femur started. <b>Barlow:</b> adduction plus gentle pressure toward the table pushes a located but unstable head over the posterior rim. <b>Ortolani:</b> abduction while the middle finger lifts the greater trochanter brings a dislocated head back over the rim with a palpable clunk. Both work best in the first months; later the dislocated hip stiffens, Ortolani turns negative and limited abduction becomes the key sign (Miller's, p. 223; Netter's Concise, p. 264).", 600);
 })();
 
 /* ---- NEW 9. Graf alpha and beta angles (schematic) ---- */
-const FIG_GRAF = fig(`<svg viewBox="0 0 420 270" role="img" aria-label="Graf alpha and beta angles, schematic">
-<line x1="160" y1="12" x2="160" y2="258" ${LINE("var(--muted)", 1.2, "5 4")}/>${T(166, 256, "Baseline (along the ilium)", 9)}
-<path d="M160 22 V 120" ${LINE("currentColor", 5)}/>${T(152, 36, "Ilium", 10, "end")}
-<path d="M160 120 C 186 128, 214 140, 240 160" ${LINE("currentColor", 5)}/>${T(246, 170, "Bony roof", 10)}
-<circle cx="205" cy="194" r="42" ${BONE}/>${T(214, 200, "Femoral head", 10, "middle")}${T(214, 213, "(cartilage)", 9, "middle")}
-<path d="M160 124 L 126 152 L 152 160 Z" style="fill:var(--accent);fill-opacity:.35;stroke:currentColor" stroke-width="1"/>${T(120, 166, "Labrum", 10, "end")}
-<line x1="160" y1="120" x2="277" y2="177" ${MARK(1.8)}/>
-<line x1="160" y1="120" x2="91" y2="178" ${LINE("var(--accent)", 1.8)}/>
-<path d="M160 160 A 40 40 0 0 0 196 137.5" ${LINE("var(--mark)", 1.8)}/>${T(178, 140, "α", 15, "middle", 'font-weight="700"')}
-<path d="M160 150 A 30 30 0 0 1 137 139.3" ${LINE("var(--accent)", 1.8)}/>${T(134, 126, "β", 15, "middle", 'font-weight="700"')}
-${T(280, 40, "α: baseline vs bony roof", 11, "start", 'font-weight="700"')}${T(280, 54, "normal 60° or more", 10)}
-${T(280, 80, "β: baseline vs cartilage", 11, "start", 'font-weight="700"')}${T(280, 94, "roof (labrum); normal", 10)}${T(280, 108, "under 55°", 10)}
-</svg>`, "Schematic of the Graf ultrasound measurement, not an ultrasound image (real scans are shown in a standard rotated orientation). A deep bony socket gives a large α; a labrum pushed up by a subluxing head gives a large β. Thresholds from Miller's, p. 224. Used before the femoral head ossifies (about 4–6 months).", 420);
 
 /* ---- NEW 10. Pavlik position + safe zone ---- */
-const FIG_PAVLIK = (() => {
-  const cx = 300, cy = 200, R = 120;
-  const pt = (deg, r = R) => [cx + r * Math.cos(deg * Math.PI / 180), cy - r * Math.sin(deg * Math.PI / 180)];
-  const sector = (a1, a2, r) => { const [x1, y1] = pt(a1, r), [x2, y2] = pt(a2, r); return `M${cx} ${cy} L${x1.toFixed(1)} ${y1.toFixed(1)} A ${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)} Z`; };
-  const ray = (deg, c, w = 2, dash = "") => { const [x, y] = pt(deg); return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" ${LINE(c, w, dash)}/>`; };
-  const lab = (deg, r, txt, size = 10) => { const [x, y] = pt(deg, r); return T(x.toFixed(1), y.toFixed(1), txt, size, "start", 'font-weight="700"'); };
-  return fig(`<svg viewBox="0 0 470 270" role="img" aria-label="Pavlik harness position and Ramsey safe zone">
-${T(80, 20, "Side view: flexion", 12, "middle", 'font-weight="700"')}
-<path d="M90 190 H 20" ${LINE("currentColor", 7)} style="stroke:var(--muted);stroke-opacity:.5" stroke-linecap="round"/>${T(24, 210, "trunk", 9)}
-<path d="M90 190 L 105.6 101.4" ${LINE("currentColor", 7)} style="stroke:var(--accent);stroke-opacity:.6" stroke-linecap="round"/>${T(112, 104, "thigh", 9)}
-<circle cx="90" cy="190" r="5" ${BONE}/>
-<path d="M60 190 A 30 30 0 0 1 95.2 160.5" ${LINE("var(--mark)", 1.8)}/>${T(62, 166, "~100°", 11, "end", 'font-weight="700"')}
-${T(80, 236, "Too much flexion →", 10, "middle")}${T(80, 249, "femoral nerve palsy", 10, "middle")}
-${T(320, 20, "From the feet: abduction", 12, "middle", 'font-weight="700"')}
-<path d="${sector(90, 65, R)}" style="fill:var(--bad);fill-opacity:.18"/>
-<path d="${sector(65, 30, R)}" style="fill:var(--good);fill-opacity:.4"/>
-<path d="${sector(30, 0, R)}" style="fill:var(--bad);fill-opacity:.18"/>
-${ray(90, "var(--muted)", 1.2, "4 3")}${ray(65, "var(--good)", 2)}${ray(30, "var(--good)", 2)}${ray(0, "var(--muted)", 1.2, "4 3")}
-<circle cx="${cx}" cy="${cy}" r="5" ${BONE}/>
-${T(cx - 4, 74, "Thighs together", 9, "end")}
-${lab(80, R + 8, "Redislocates")}${lab(48, R + 10, "Safe zone", 11)}${lab(14, R + 8, "AVN risk")}
-${T(cx + R, cy + 16, "Full frog", 9, "end")}
-${T(310, 240, "Hold the hip inside the green arc.", 10, "middle")}${T(310, 253, "Arc under about 40° wide → consider adductor tenotomy.", 10, "middle")}
-</svg>`, "Pavlik harness: about 100° of flexion with gentle abduction inside the safe zone of Ramsey, the arc between the angle where the hip redislocates in adduction and the forced abduction that risks AVN. Angles are illustrative; the zone is measured for each child (Miller's, p. 225).", 480);
-})();
 
 /* ---- NEW 11. Perthes stages ---- */
 const FIG_PERTHES = (() => {
   const dome = "M0 50 C 0 18, 22 0, 50 0 C 78 0, 100 18, 100 50 Z";
+  const LUC = `style="fill:var(--panel);stroke:currentColor" stroke-width=".8" stroke-dasharray="2 2"`; /* lucent (resorbed) bone */
   const neck = `<path d="M8 56 C 10 80, 18 100, 22 118 M92 56 C 88 80, 84 100, 82 118" ${LINE("currentColor", 1.4)}/><path d="M0 56 H100" ${LINE("var(--accent)", 3)}/>`;
   const st = (x, title, sub, inner) => `<g transform="translate(${x} 40)">${inner}${neck}${T(50, 140, title, 11, "middle", 'font-weight="700"')}${T(50, 154, sub[0], 9.5, "middle")}${T(50, 166, sub[1] || "", 9.5, "middle")}</g>`;
-  return fig(`<svg viewBox="0 0 520 220" role="img" aria-label="Waldenström stages of Perthes disease">
-${st(10, "1. Initial", ["small, dense head;", "crescent line"], `<g transform="translate(10 8) scale(.8)"><path d="${dome}" style="fill:var(--muted);fill-opacity:.55;stroke:currentColor" stroke-width="1.4"/></g><path d="M22 22 C 38 10, 62 10, 78 22" ${LINE("var(--bad)", 1.6)}/>`)}
+  return fig(`<svg viewBox="0 0 534 220" role="img" aria-label="Waldenström stages of Perthes disease">
+${AXES(522, 96, { u: "S", d: "I" })}
+${st(10, "1. Initial", ["sclerotic (dense),", "smaller head"], `<g transform="translate(10 10) scale(.8)"><path d="${dome}" style="fill:var(--muted);fill-opacity:.7;stroke:currentColor" stroke-width="1.6"/><path d="M14 30 C 22 10, 78 10, 86 30" style="stroke:var(--bad);fill:none" stroke-width="3" stroke-linecap="round"/></g><path d="M50 -22 V 18" ${LINE("var(--bad)", 1)}/>`)}
+${T(60, 14, "crescent sign", 10, "middle", 'font-weight="700" style="fill:var(--bad)"')}
 ${st(140, "2. Fragmentation", ["dead bone resorbed;", "head soft, can flatten"], `<g transform="translate(0 12)"><path d="M0 44 C 0 22, 14 10, 30 8 L 32 44 Z" ${BONE}/><path d="M38 44 L 36 6 C 48 4, 58 4, 66 6 L 64 44 Z" ${BONE}/><path d="M70 44 L 70 10 C 86 14, 100 26, 100 44 Z" ${BONE}/></g>`)}
-${st(270, "3. Reossification", ["new bone fills in", "from the edges"], `<path d="M0 54 C 0 26, 22 8, 50 8 C 78 8, 100 26, 100 54 Z" ${BONE}/><path d="M30 50 C 34 30, 48 24, 56 34 C 62 44, 70 40, 72 50" ${LINE("currentColor", 1, "2 3")}/>`)}
-${st(400, "4. Healed", ["round = good;", "flat or large = poorer"], `<path d="M-6 54 C -6 34, 18 18, 50 18 C 82 18, 106 34, 106 54 Z" ${SOFT}/><path d="${dome}" transform="translate(0 4)" ${BONE}/>`)}
-</svg>`, "Waldenström stages of Perthes disease (AP view of the femoral head). The outcome depends on the shape the head heals in; containment aims to keep the soft head inside the socket during fragmentation (Miller's, pp. 227–229). Dashed outline in stage 4 = a flattened, enlarged head (coxa plana / magna).", 520);
+${st(270, "3. Reossification", ["new bone fills in from", "the edges; head flattened"], `<path d="M-2 50 C -2 30, 22 16, 50 16 C 78 16, 102 30, 102 50 Z" ${BONE}/><path d="M26 50 C 28 38, 40 30, 50 32 C 62 30, 72 40, 74 50 Z" ${LUC}/>`)}
+${st(400, "4. Healed (poor result)", ["flat, wide head", "(dashed = normal round head)"], `<path d="M-10 50 C -10 34, 16 24, 50 24 C 84 24, 110 34, 110 50 Z" ${BONE}/><path d="${dome}" ${SOFT}/>`)}
+</svg>`, "Waldenström stages of Perthes disease, AP view of the femoral head. <b>Initial:</b> the head is small and dense (sclerotic), the joint space widens (not shown), and the <b>crescent sign</b> (red), a thin line just under the top of the head, marks a subchondral fracture. <b>Fragmentation:</b> the dead bone is resorbed and the head can collapse. <b>Reossification:</b> new bone fills in from the edges. <b>Healed:</b> the head keeps the shape it remodelled into; this one healed flat and wide (coxa plana / magna), a poorer outcome than a round head (Miller's, p. 228). Containment aims to keep the soft head inside the socket during fragmentation.", 520);
 })();
 
 const FIG_PELVIC = fig(`<svg viewBox="105 0 375 290" role="img" aria-label="Pelvic incidence, pelvic tilt and sacral slope">
 <path d="M196 92 L 246 64 L 262 96 L 212 124 Z" ${BONE}/>${T(228, 92, "L5", 10, "middle")}
-<path d="M205 148 L 250 110 C 270 150, 270 200, 250 240 C 236 228, 222 196, 205 148 Z" ${BONE}/>${T(242, 180, "Sacrum", 10, "middle")}
+<path d="M205 148 L 250 110 C 270 150, 270 200, 250 240 C 236 228, 222 196, 205 148 Z" ${BONE}/><line x1="296" y1="226" x2="262" y2="214" ${LINE("var(--muted)", 1)}/>${T(300, 230, "Sacrum", 10)}
 <line x1="205" y1="148" x2="250" y2="110" style="stroke:var(--accent)" stroke-width="3"/>
 <line x1="150" y1="148" x2="290" y2="148" ${LINE("var(--muted)", 1.2, "4 3")}/>
 <path d="M240 148 A 35 35 0 0 0 232 125" ${LINE("var(--accent)", 1.6)}/>${T(268, 140, "SS", 11, "start", 'font-weight="700"')}
@@ -674,7 +803,7 @@ const FIG_PELVIC = fig(`<svg viewBox="105 0 375 290" role="img" aria-label="Pelv
 ${T(300, 40, "PI = PT + SS", 13, "start", MONO)}
 ${T(300, 62, "PI: fixed for each person", 10)}${T(300, 75, "(normal about 50°)", 10)}
 ${T(300, 98, "PT and SS change as the", 10)}${T(300, 111, "pelvis tilts", 10)}
-${T(120, 30, "← Front", 10)}
+${AXES(140, 60, { u: "S", d: "I", l: "A", r: "P" })}
 </svg>`, "Lateral view of the lumbosacral junction. <b>Pelvic incidence (PI)</b>: angle between a line perpendicular to the S1 endplate at its midpoint (dashed teal) and a line to the centre of the femoral heads. <b>Sacral slope (SS)</b>: S1 endplate vs horizontal. <b>Pelvic tilt (PT)</b>: line to the femoral heads vs vertical. Here PI 50° = PT 10° + SS 40° (Miller's, p. 253).", 500);
 
 const FIG_CONUS = fig(`<svg viewBox="0 0 470 410" role="img" aria-label="Conus medullaris, cauda equina and filum terminale, back view">
@@ -702,6 +831,7 @@ ${T(88, 280, "L5", 10, "end", MONO)}
 <line x1="156" y1="128" x2="262" y2="128" style="stroke:var(--muted)" stroke-width="1"/>${T(268, 132, "Conus medullaris", 11, "start", 'font-weight="700"')}${T(268, 145, "cord tapers and ends, lower L1", 9.5)}
 <line x1="214" y1="196" x2="262" y2="196" style="stroke:var(--muted)" stroke-width="1"/>${T(268, 200, "Cauda equina", 11, "start", 'font-weight="700"')}${T(268, 213, "lumbar and sacral roots below the conus", 9.5)}
 <line x1="176" y1="322" x2="262" y2="322" style="stroke:var(--muted)" stroke-width="1"/>${T(268, 326, "Dural sac ends (about S2)", 11, "start", 'font-weight="700"')}
+${AXES(30, 60, { u: "S", d: "I" })}
 <line x1="152" y1="380" x2="262" y2="380" style="stroke:var(--muted)" stroke-width="1"/>${T(268, 384, "Filum terminale", 11, "start", 'font-weight="700"')}${T(268, 397, "thin strand down to the coccyx", 9.5)}
 </svg>`, "Original schematic, seen from behind with the back of the canal removed. The <b>cord</b> (red) ends in a taper, the <b>conus medullaris</b>, at about the lower border of L1 in adults (Miller's, p. 201). Below it the canal holds only <b>nerve roots</b> (the cauda equina, gold) heading down to their exit holes, plus the <b>filum terminale</b> (dotted). Dural sac ending at about S2 is not in Miller's.", 470);
 
@@ -711,13 +841,15 @@ function fusionPanel(x0, title, sub, off, from, to, note1, note2) {
   let s = `<g transform="translate(${x0} 0)">` + T(cx, 16, title, 13, "middle", 'font-weight="700"') + T(cx, 31, sub, 9.5, "middle");
   s += `<line x1="${cx}" y1="${y0 - 6}" x2="${cx}" y2="${y0 + 17 * h + 18}" ${MARK(1.5, "4 4")}/>`;
   const pts = [];
+  off = off.map(o => -o);
+  if (x0 === 0) s += AXES(116, y0 + 4, { l: "R", r: "L" }, 9);
   off.forEach((o, i) => {
     const y = y0 + i * h, x = cx + o;
     const d = (off[Math.min(i + 1, 16)] - off[Math.max(i - 1, 0)]) / 2;
     const a = Math.atan2(d, h) * 180 / Math.PI;
     const fused = i >= from && i <= to;
     s += `<rect x="${x - 15}" y="${y}" width="30" height="11" rx="2" transform="rotate(${(-a).toFixed(1)} ${x} ${y + 5.5})" ${fused ? `style="fill:var(--accent-soft);stroke:var(--accent)" stroke-width="1.6"` : BONE}/>`;
-    if (i % 2 === 0 || i === from || i === to) s += T(x - 22, y + 9, LV[i], 8, "end", MONO);
+    if (i % 2 === 0 || i === from || i === to) s += o > 0 ? T(x + 22, y + 9, LV[i], 8, "start", MONO) : T(x - 22, y + 9, LV[i], 8, "end", MONO);
     if (fused) pts.push([x, y + 5.5]);
   });
   for (const dx of [-8, 8]) s += `<polyline points="${pts.map(([x, y]) => `${(x + dx).toFixed(1)},${y}`).join(" ")}" style="stroke:var(--accent);fill:none" stroke-width="3" stroke-linecap="round"/>`;
@@ -732,27 +864,205 @@ const FIG_FUSE_A = fusionFig([
   ["Lenke 1A", "MT only; lumbar straight", [0,0,2,6,12,19,25,28,26,20,12,5,1,-1,-1,0,0], 3, 12, "Fuse T4–L1", "to vertebra touched by CSVL"],
   ["Lenke 1C", "MT structural; lumbar flexible", [0,0,2,6,12,19,25,28,26,18,8,-4,-14,-20,-18,-10,0], 3, 11, "Fuse T4–T12", "selective thoracic fusion"],
   ["Lenke 5C", "TL/L only; MT flexible", [0,0,0,1,3,5,8,10,10,6,-2,-12,-22,-26,-20,-10,0], 10, 14, "Fuse T11–L3", "to distal end vertebra"]
-], "Shaded vertebrae with rods are fused. In 1C the lumbar curve is left unfused because it is flexible and corrects once the thoracic curve is straightened. Levels are illustrative; the rules (Miller's, p. 246): Lenke 1–2 with A → distal level touched by the CSVL; B → stable vertebra; Lenke 3–6 → distal end vertebra.", "Fusion levels for Lenke 1A, 1C and 5C");
+], "AP view (patient's right on your left). Shaded vertebrae with rods are fused. In 1C the lumbar curve is left unfused because it is flexible and corrects once the thoracic curve is straightened. Levels are illustrative; the rules (Miller's, p. 246): Lenke 1–2 with A → distal level touched by the CSVL; B → stable vertebra; Lenke 3–6 → distal end vertebra.", "Fusion levels for Lenke 1A, 1C and 5C");
 
 const FIG_FUSE_B = fusionFig([
   ["Lenke 2A", "PT + MT structural", [0,-6,-10,-8,-2,8,18,25,26,20,12,5,1,-1,-1,0,0], 1, 12, "Fuse T2–L1", "PT included: start at T2"],
   ["Lenke 3C", "MT + TL/L, MT larger", [0,0,2,6,12,19,25,28,26,18,6,-8,-20,-27,-25,-14,0], 3, 15, "Fuse T4–L4", "both curves; distal end vertebra"],
   ["Lenke 6C", "TL/L + MT, TL/L larger", [0,0,1,4,8,12,16,18,16,8,-4,-16,-26,-31,-26,-14,0], 3, 15, "Fuse T4–L4", "both curves; distal end vertebra"]
-], "When a second curve is structural it is included in the fusion. A structural proximal thoracic curve (or a high left shoulder) means starting at T2. Fusing into the lower lumbar spine costs motion, which is why the lumbar modifier and bending films matter so much. Levels are illustrative.", "Fusion levels for Lenke 2A, 3C and 6C");
+], "AP view (patient's right on your left). When a second curve is structural it is included in the fusion. A structural proximal thoracic curve (or a high left shoulder) means starting at T2. Fusing into the lower lumbar spine costs motion, which is why the lumbar modifier and bending films matter so much. Levels are illustrative.", "Fusion levels for Lenke 2A, 3C and 6C");
 
-const FIG_SHAPES = fig(`<svg viewBox="0 0 390 270" role="img" aria-label="Typical curve shapes by cause">
-${T(65, 16, "Idiopathic", 12, "middle", 'font-weight="700"')}${T(65, 30, "S-shaped, balanced", 9.5, "middle")}
-<path d="M65 45 C 105 80, 105 125, 65 150 C 30 172, 30 205, 65 225" style="stroke:currentColor;fill:none" stroke-width="7" stroke-linecap="round"/>
-<path d="M35 232 h60 l-8 18 h-44 Z" ${BONE}/>
-${T(195, 16, "Neuromuscular", 12, "middle", 'font-weight="700"')}${T(195, 30, "long C, pelvis tilted", 9.5, "middle")}
-<path d="M185 45 C 245 90, 250 170, 205 222" style="stroke:currentColor;fill:none" stroke-width="7" stroke-linecap="round"/>
-<path d="M170 222 l64 -14 l2 18 l-56 14 Z" ${BONE}/>
-<line x1="160" y1="246" x2="250" y2="226" ${MARK(1.5, "4 3")}/>
-${T(325, 16, "NF1 dystrophic", 12, "middle", 'font-weight="700"')}${T(325, 30, "short, sharp apex", 9.5, "middle")}
-<path d="M320 45 L 320 100 C 322 118, 352 128, 352 140 C 352 152, 322 162, 320 180 L 320 225" style="stroke:currentColor;fill:none" stroke-width="7" stroke-linecap="round"/>
-<path d="M290 232 h60 l-8 18 h-44 Z" ${BONE}/>
-${T(358, 145, "apex", 9, "start")}
-</svg>`, "Schematic only. Neuromuscular curves are long, C-shaped and collapse onto a tilted pelvis (pelvic obliquity, dashed line). Dystrophic NF1 curves are short, sharp and often kyphotic (Miller's, pp. 249–251).", 400);
+/* ---- Shared spine parts (redraw batch, 2026-11-01) ---- */
+/* Lumbar vertebra, lateral view, anterior on the viewer's left. Local frame: body top-left at (0,0), 56 x 40. */
+const LV_BODY = `M5 0 H51 Q56 0 56 5 V31 Q56 36 51 36 H5 Q0 36 0 31 V5 Q0 0 5 0 Z`;
+const LV_POST = `M56 6 H64 L68 -16 L80 -16 L80 6 L92 10 L126 16 Q130 23 126 30 L94 30 L94 50 L82 50 L80 26 L70 20 H56 Z`;
+/* split along the pars for a defect: the front part moves with the body, the back part stays */
+const LV_FRONT = `M56 6 H64 L68 -16 L80 -16 L80 6 L86 8 L76 23 L70 20 H56 Z`;
+const LV_BACK = `M86 8 L92 10 L126 16 Q130 23 126 30 L94 30 L94 50 L82 50 L80 26 L76 23 Z`;
+const lumbarLat = (x, y, extra = "") => `<g transform="translate(${x} ${y})"><path d="${LV_POST}" ${BONE}/><path d="${LV_BODY}" ${BONE}/>${extra}</g>`;
+/* Sacrum, lateral: S1 endplate from (0,0) to (56,0), S1 superior articular process behind it (same spacing as the lumbar parts) */
+const SACRUM_LAT = `M0 0 H56 L64 0 L68 -16 L80 -16 L82 4 C 90 14, 92 30, 88 44 C 84 80, 72 110, 56 130 C 50 136, 42 134, 42 126 C 44 100, 36 72, 22 52 C 12 38, 2 24, 0 12 Z`;
+const DISC = (y) => `<rect x="2" y="${y}" width="52" height="10" rx="2" style="fill:var(--accent);fill-opacity:.22;stroke:currentColor" stroke-width=".8"/>`;
+/* AP spine (coronal) stack T1-L5; offs[i] = sideways shift of each level (AP convention: + = to the viewer's right) */
+function apStack(cx, y0, offs, { h = 15, w = 26, fill = BONE, pelvisTilt = 0, ribs = null } = {}) {
+  let s = "";
+  offs.forEach((o, i) => {
+    const y = y0 + i * h, x = cx + o;
+    const d = (offs[Math.min(i + 1, offs.length - 1)] - offs[Math.max(i - 1, 0)]) / 2;
+    const a = Math.atan2(d, h) * 180 / Math.PI;
+    if (ribs && i >= ribs[0] && i <= ribs[1]) s += `<path d="M${x - w / 2} ${y + 5} C ${x - w / 2 - 12} ${y + 3}, ${x - w / 2 - 20} ${y + 8}, ${x - w / 2 - 24} ${y + 16} M${x + w / 2} ${y + 5} C ${x + w / 2 + 12} ${y + 3}, ${x + w / 2 + 20} ${y + 8}, ${x + w / 2 + 24} ${y + 16}" ${LINE("currentColor", .8)}/>`;
+    s += `<rect x="${x - w / 2}" y="${y}" width="${w}" height="${h - 4}" rx="2.5" transform="rotate(${(-a).toFixed(1)} ${x} ${y + (h - 4) / 2})" ${fill}/>`;
+  });
+  const sy = y0 + offs.length * h + 2;
+  s += `<g transform="rotate(${pelvisTilt} ${cx} ${sy + 14})"><path d="M${cx - 13} ${sy} h26 l-7 24 h-12 Z" ${BONE}/>
+<path d="M${cx - 15} ${sy + 4} C ${cx - 26} ${sy - 8}, ${cx - 42} ${sy - 6}, ${cx - 46} ${sy + 6} C ${cx - 44} ${sy + 20}, ${cx - 34} ${sy + 30}, ${cx - 22} ${sy + 34} L ${cx - 15} ${sy + 20} Z" ${BONE}/>
+<path d="M${cx + 15} ${sy + 4} C ${cx + 26} ${sy - 8}, ${cx + 42} ${sy - 6}, ${cx + 46} ${sy + 6} C ${cx + 44} ${sy + 20}, ${cx + 34} ${sy + 30}, ${cx + 22} ${sy + 34} L ${cx + 15} ${sy + 20} Z" ${BONE}/></g>`;
+  return s;
+}
+
+/* ---- Lumbar vertebra and pars (L4-S1, lateral, anterior on the viewer's left) ---- */
+const FIG_VERTEBRA = (() => {
+  const B = 'font-weight="700"', K = 1.6, OX = 40, OY = 46;
+  const g = (x, y) => [+(OX + K * x).toFixed(1), +(OY + K * y).toFixed(1)];
+  const lead = (tx, ty, lx, ly) => { const [x, y] = g(tx, ty); return `<path d="M${x} ${y} L ${lx} ${ly}" ${LINE("currentColor", .9)}/>${DOT(x, y, "currentColor", 2)}`; };
+  const svg = `<svg viewBox="0 0 380 372" role="img" aria-label="Lower lumbar spine side view with an L5 pars fracture">
+<g transform="translate(${OX} ${OY}) scale(${K})">
+${lumbarLat(0, 0)}${DISC(36)}
+${lumbarLat(0, 46, `<path d="M76 23 L 86 8" style="stroke:var(--bad)" stroke-width="2.4" stroke-linecap="round"/>`)}${DISC(82)}
+<defs><clipPath id="vtSac"><rect x="-10" y="70" width="150" height="72"/></clipPath></defs>
+<g clip-path="url(#vtSac)"><g transform="translate(0 92)"><path d="${SACRUM_LAT}" ${BONE}/></g></g>
+<path d="M-2 141 l6 -3 l6 3 l6 -3 l6 3 l6 -3 l6 3 l6 -3 l6 3 l6 -3 l6 3 l6 -3 l6 3 l6 -3 l6 3" ${LINE("currentColor", .8)}/>
+</g>
+${T(34, g(0, 22)[1], "L4", 14, "end", `${B} ${MONO}`)}${T(34, g(0, 68)[1], "L5", 14, "end", `${B} ${MONO}`)}${T(34, g(0, 106)[1], "S1", 14, "end", `${B} ${MONO}`)}
+${T(g(28, 64)[0], g(28, 64)[1], "body", 14, "middle")}
+${lead(14, 87, 30, 200)}${T(30, 196, "disc", 14, "end")}
+${lead(60, 13, 112, 22)}${T(112, 17, "pedicle", 14, "middle")}
+${lead(74, 33, 248, 66)}${T(252, 70, "superior", 14)}${T(252, 86, "articular process", 14)}
+${lead(80, 40, 248, 102)}${T(252, 106, "facet joint", 14)}
+${lead(81, 61, 248, 138)}${T(252, 142, "pars", 14, "start", `${B} style="fill:var(--bad)"`)}${T(252, 158, "(fracture)", 14, "start", 'style="fill:var(--bad)"')}
+${lead(116, 69, 248, 178)}${T(252, 182, "spinous", 14)}${T(252, 198, "process", 14)}
+${lead(88, 90, 248, 220)}${T(252, 224, "inferior", 14)}${T(252, 240, "articular process", 14)}
+${AXES(330, 300, { u: "S", d: "I", l: "A", r: "P" }, 14)}
+${T(190, 340, "L5 pars fracture, no slip", 14.5, "middle", B)}${T(190, 360, "(spondylolysis)", 14, "middle")}
+</svg>`;
+  return fig(svg, "Lower lumbar spine, side view (front on your left). The <b>pars interarticularis</b> is the narrow bridge of bone between the superior and inferior articular processes. A stress fracture of the L5 pars (red) is <b>spondylolysis</b>: L5 has not slipped yet. It is common in athletes who hyperextend (Miller's, p. 253; Netter's, p. 35).", 400);
+})();
+
+/* ---- Risser sign (AP pelvis, adolescent; patient's right on the viewer's left) ---- */
+const FIG_RISSER = (() => {
+  const B = 'font-weight="700"';
+  /* right iliac crest from ASIS (t=0, lateral) to PSIS (t=1, medial) */
+  const P0 = [26, 70], P1 = [44, 14], P2 = [112, 8], P3 = [134, 44];
+  const bz = t => { const u = 1 - t; return [0, 1].map(k => u * u * u * P0[k] + 3 * u * u * t * P1[k] + 3 * u * t * t * P2[k] + t * t * t * P3[k]); };
+  const nrm = t => { const a = bz(Math.max(0, t - .01)), b = bz(Math.min(1, t + .01)); const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy); return [dy / l, -dx / l]; };
+  const capPts = (t1, t2, off) => { const pts = []; for (let t = t1; t <= t2 + 1e-6; t += .02) { const p = bz(t), n = nrm(t); pts.push([p[0] - n[0] * off, p[1] - n[1] * off]); } return pts; };
+  const poly = (pts, st) => `<polyline points="${pts.map(p => p.map(v => v.toFixed(1)).join(",")).join(" ")}" ${st}/>`;
+  const ilium = `<path d="M${P0[0]} ${P0[1]} C ${P1[0]} ${P1[1]}, ${P2[0]} ${P2[1]}, ${P3[0]} ${P3[1]} C 136 70, 128 98, 112 120 L 86 138 C 70 132, 52 122, 44 110 C 30 98, 22 84, ${P0[0]} ${P0[1]} Z" ${BONE}/>`;
+  const sacrum = `<path d="M140 44 H180 L172 128 Q160 140 148 128 Z" ${BONE}/>`;
+  const capStyle = op => `style="stroke:var(--accent);stroke-opacity:${op};fill:none" stroke-width="5" stroke-linecap="round"`;
+  /* stage s: 0 none, 1-4 quarters from lateral, 5 fused */
+  const cap = (s, off = 7) => {
+    if (s === 0) return "";
+    if (s === 5) return poly(capPts(0, 1, 2.5), capStyle(.9));
+    if (s === 4 && off < 7) return poly(capPts(0, 1, off), capStyle(.9));
+    let o = ""; for (let q = 0; q < s; q++) o += poly(capPts(q * .25 + .01, (q + 1) * .25 - .01, off), capStyle(.9));
+    return o;
+  };
+  const mirror = s => `<g transform="translate(320 0) scale(-1 1)">${s}</g>`;
+  const main = `<svg viewBox="0 0 320 238" role="img" aria-label="Risser stages on the iliac crests" style="flex:1 1 100%;max-width:420px">
+${T(160, 15, "Iliac crests on an AP pelvis", 12, "middle", B)}
+<g transform="translate(0 26)">${sacrum}${ilium}${cap(4)}${mirror(ilium + cap(5))}
+${[0, 1, 2, 3].map(q => { const p = bz(q * .25 + .125), n = nrm(q * .25 + .125); return T((p[0] - n[0] * 20).toFixed(1), (p[1] - n[1] * 20 + 4).toFixed(1), String(q + 1), 12, "middle", `${B} ${MONO}`); }).join("")}
+${T(18, 114, "ASIS", 11, "middle", B)}${T(140, 30, "PSIS", 11, "start", B)}
+${T(80, 160, "Right: quarters 1–4", 11, "middle")}${T(80, 174, "spread lateral → medial", 11, "middle")}
+${T(240, 160, "Left: Risser 5,", 11, "middle")}${T(240, 174, "fused to the ilium", 11, "middle")}
+${AXES(160, 186, { u: "S", d: "I", l: "R", r: "L" }, 13)}</g></svg>`;
+  const thumb = s => `<svg viewBox="0 0 150 150" role="img" aria-label="Risser ${s}" style="flex:1 1 120px;max-width:150px">
+<g transform="translate(6 6) scale(.85)">${ilium}${cap(s, 6.9)}</g>
+${T(75, 144, `Risser ${s}`, 15, "middle", B)}</svg>`;
+  return fig(`<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:2px 6px">${main}${[0, 1, 2, 3, 4, 5].map(thumb).join("")}</div>`,
+  "Iliac crests on an AP pelvis (patient's right on your left). The crest apophysis (green) ossifies from lateral (ASIS) to medial (PSIS). Risser 1–4 = how far it has spread, in quarters; Risser 5 = fused to the ilium. Peak growth happens at Risser 0, before menarche (Miller's, pp. 244–246). This is the US grading system.", 440);
+})();
+
+/* ---- Structural vs compensatory (AP convention: patient's right on the viewer's left) ---- */
+const FIG_STRUCTURAL = (() => {
+  const B = 'font-weight="700"';
+  const std = [0, -2, -6, -11, -17, -22, -25, -26, -24, -18, -10, -2, 6, 13, 16, 12, 5];
+  const tilt = k => std.map((_, i) => k * (16 - i));
+  const mix = (a, b) => a.map((v, i) => +(v + b[i]).toFixed(1));
+  const bendR = mix(std.map((v, i) => i < 12 ? v * .88 : v * 1.15), tilt(-1.6));
+  const bendL = mix(std.map((v, i) => i < 12 ? v * 1.08 : v * .45), tilt(1.6));
+  const col = (cx, title, offs, notes, arrow) => `${T(cx, 16, title, 13, "middle", B)}${arrow}${apStack(cx, 40, offs)}${notes}`;
+  const svg = `<svg viewBox="0 0 360 384" role="img" aria-label="Standing and side-bending films of a right thoracic and left lumbar curve">${AH_DEF}
+${col(66, "Standing", std, `${T(26, 162, "MT", 13, "end", B)}${T(98, 262, "TL/L", 13, "start", B)}${T(66, 346, "MT 52°", 13, "middle", B)}${T(66, 361, "TL/L 38°", 13, "middle", B)}`, "")}
+${col(182, "Bend right", bendR, `${T(182, 346, "MT 45°: stays", 13, "middle", B)}${T(182, 361, "25° or more →", 13, "middle")}${T(182, 376, "structural", 13, "middle", `${B} style="fill:var(--bad)"`)}`, ARROW("M194 26 C 186 24, 176 26, 168 32", "currentColor", 1.4))}
+${col(298, "Bend left", bendL, `${T(298, 346, "TL/L 18°:", 13, "middle", B)}${T(298, 361, "under 25° →", 13, "middle")}${T(298, 376, "not structural", 13, "middle", `${B} style="fill:var(--good)"`)}`, ARROW("M286 26 C 294 24, 304 26, 312 32", "currentColor", 1.4))}
+${AXES(22, 62, { u: "S", d: "I", l: "R", r: "L" }, 13)}
+</svg>`;
+  return fig(svg, "AP films (patient's right on your left) of a right thoracic (MT) and left thoracolumbar/lumbar (TL/L) curve. Bending toward a curve's convex side shows whether it is flexible. Here the thoracic curve still measures 45° on right bending, so it is <b>structural</b>; the lumbar curve falls to 18° on left bending, so it is <b>not structural</b> (compensatory). The largest curve is always structural; another curve is structural if it fails to bend to less than 25° (Miller's, p. 244).", 420);
+})();
+
+/* ---- Scheuermann kyphosis (lateral thoracic spine, anterior on the viewer's left) ---- */
+const FIG_WEDGE = (() => {
+  const B = 'font-weight="700"', rad = d => d * Math.PI / 180;
+  const column = (x0, y0, wedges, discW, total, schmorl) => {
+    let phi = rad(total / 2), P = [x0, y0], s = "", w = 40, h = 24, disc = 7, tops = [], bots = [];
+    wedges.forEach((wd, i) => {
+      const d = [Math.sin(phi), Math.cos(phi)], p = [Math.cos(phi), -Math.sin(phi)];
+      const TA = [P[0] - p[0] * w / 2, P[1] - p[1] * w / 2], TP = [P[0] + p[0] * w / 2, P[1] + p[1] * w / 2];
+      const BP = [TP[0] + d[0] * h, TP[1] + d[1] * h], BA = [TA[0] + d[0] * (h - w * Math.tan(rad(wd))), TA[1] + d[1] * (h - w * Math.tan(rad(wd)))];
+      const f = q => q.map(v => v.toFixed(1)).join(" ");
+      s += `<path d="M${f(TA)} L${f(TP)} L${f(BP)} L${f(BA)} Z" ${wd >= 5 ? `style="fill:var(--bad-bg);stroke:currentColor" stroke-width="1.4"` : BONE}/>`;
+      if (schmorl && schmorl.includes(i)) { const m = [(TA[0] + TP[0]) / 2, (TA[1] + TP[1]) / 2]; s += `<circle cx="${(m[0] + d[0] * 3).toFixed(1)}" cy="${(m[1] + d[1] * 3).toFixed(1)}" r="3.4" style="fill:var(--panel);stroke:currentColor" stroke-width="1"/>`; }
+      if (wd >= 5) s += T(((TA[0] + BA[0]) / 2 - 6).toFixed(1), ((TA[1] + BA[1]) / 2 + 4).toFixed(1), `${wd}°`, 10.5, "end", `${B} style="fill:var(--bad)"`);
+      tops.push([TA, TP]); bots.push([BA, BP]);
+      phi -= rad(wd);
+      const M = [(BA[0] + BP[0]) / 2, (BA[1] + BP[1]) / 2];
+      phi -= rad(discW); const d2 = [Math.sin(phi), Math.cos(phi)];
+      P = [M[0] + d2[0] * disc, M[1] + d2[1] * disc];
+    });
+    /* Cobb lines: top endplate of the top body, bottom endplate of the bottom body, extended forward */
+    const line = ([A, Pp]) => { const dx = A[0] - Pp[0], dy = A[1] - Pp[1], l = Math.hypot(dx, dy); return `<line x1="${(Pp[0] + dx / l * 4).toFixed(1)}" y1="${(Pp[1] + dy / l * 4).toFixed(1)}" x2="${(A[0] + dx / l * 52).toFixed(1)}" y2="${(A[1] + dy / l * 52).toFixed(1)}" ${MARK(1.6, "5 4")}/>`; };
+    return s + line(tops[0]) + line(bots[bots.length - 1]);
+  };
+  const panel = (title, wedges, discW, total, cobb, schmorl, note) => `<svg viewBox="0 0 200 300" role="img" aria-label="${title}, thoracic spine side view" style="flex:1 1 200px;max-width:260px">
+${T(100, 15, title, 12, "middle", B)}
+${column(120, 40, wedges, discW, total, schmorl)}
+${T(100, 266, cobb, 12, "middle", `${B} style="fill:var(--mark)"`)}${T(100, 284, note, 10.5, "middle")}
+${AXES(178, 226, { u: "S", d: "I", l: "A", r: "P" })}</svg>`;
+  return fig(`<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px">${panel("Normal thoracic spine", [2, 2, 2, 2, 2, 2, 2], 2, 26, "Kyphosis about 26°", null, "even bodies, flexible curve")}${panel("Scheuermann kyphosis", [3, 4, 8, 9, 8, 4, 3], 3, 57, "Kyphosis about 57°", [1, 3, 5], "3 wedged bodies (red), rigid curve")}</div>`,
+  "Thoracic spine, side view (front on your left), drawn from T6 to T12. In Scheuermann kyphosis the front of three or more neighbouring vertebral bodies is shorter than the back, each wedged 5° or more, making a rigid kyphosis over 45° (Miller's, p. 251). The dashed lines are the Cobb lines on the end vertebrae. Small dents in the endplates are Schmorl nodes (not in Miller's). Angles are illustrative.", 540);
+})();
+
+/* ---- Meyerding grading (L5-S1, lateral, anterior on the viewer's left) ---- */
+const FIG_MEYERDING = (() => {
+  const B = 'font-weight="700"', K = 1.7, OX = 66, OY = 56;
+  const g = (x, y) => [+(OX + K * x).toFixed(1), +(OY + K * y).toFixed(1)];
+  const slip = .35 * 56;
+  const main = `<svg viewBox="0 0 320 340" role="img" aria-label="Grade II L5 on S1 spondylolisthesis, side view" style="flex:1 1 100%;max-width:400px">
+${T(160, 15, "Grade II slip (about 35%)", 12, "middle", B)}
+<g transform="translate(${OX} ${OY}) scale(${K})">
+<defs><clipPath id="mySac"><rect x="-10" y="20" width="150" height="80"/></clipPath></defs>
+<g transform="translate(0 46)"><g clip-path="url(#mySac)" transform="translate(0 -46)"><g transform="translate(0 46)"><path d="${SACRUM_LAT}" ${BONE}/></g></g>
+<path d="M-2 53 l6 -3 l6 3 l6 -3 l6 3 l6 -3 l6 3 l6 -3 l6 3 l6 -3 l6 3 l6 -3 l6 3 l6 -3 l6 3 l6 -3" ${LINE("currentColor", .7)}/>
+${[1, 2, 3].map(k => `<line x1="${56 - k * 14}" y1="0" x2="${56 - k * 14}" y2="6" ${LINE("currentColor", .8)}/>`).join("")}</g>
+${DISC(36)}
+<path d="${LV_BACK}" ${BONE}/>
+<g transform="translate(${-slip} 0)"><path d="${LV_FRONT}" ${BONE}/><path d="${LV_BODY}" style="fill:var(--fig-fill);stroke:var(--mark)" stroke-width="1.3"/></g>
+<path d="M76 23 L 86 8" style="stroke:var(--bad)" stroke-width="1.6" stroke-dasharray="2 1.5"/>
+<line x1="${56 - slip}" y1="26" x2="${56 - slip}" y2="50" ${MARK(.9, "2 1.5")}/><line x1="56" y1="26" x2="56" y2="50" ${MARK(.9, "2 1.5")}/>
+<path d="M${56 - slip} 41 H 56" style="stroke:var(--bad)" stroke-width="1.8"/>
+</g>
+${["I", "II", "III", "IV"].map((gr, k) => { const [x, y] = g(56 - k * 14 - 7, 46 + 14); return T(x, y, gr, 11, "middle", `${B} ${MONO}`); }).join("")}
+${T(56, g(0, 20)[1], "L5", 13, "end", `${B} ${MONO}`)}${T(56, g(0, 66)[1], "S1", 13, "end", `${B} ${MONO}`)}
+<path d="${`M${g(82, 16)[0]} ${g(82, 16)[1]} L 262 60`}" ${LINE("currentColor", .9)}/>${T(264, 58, "pars", 11, "start", `${B} style="fill:var(--bad)"`)}${T(264, 71, "defect", 11, "start", 'style="fill:var(--bad)"')}
+<path d="${`M${g(46, 41)[0]} ${g(46, 41)[1]} L 262 120`}" ${LINE("currentColor", .9)}/>${T(264, 118, "slip", 11, "start", `${B} style="fill:var(--bad)"`)}${T(264, 131, "35%", 11, "start", 'style="fill:var(--bad)"')}
+${T(160, 300, "Quarters of the S1 endplate, counted from", 10.5, "middle")}${T(160, 314, "the back. L5 has slid past one quarter → II", 10.5, "middle")}
+${AXES(290, 236, { u: "S", d: "I", l: "A", r: "P" }, 13)}
+</svg>`;
+  const thumb = (gr, pct) => { const sh = Math.min(pct, 1.05) * 60; return `<svg viewBox="0 0 120 100" role="img" aria-label="Meyerding grade ${gr}" style="flex:1 1 88px;max-width:130px">
+<rect x="44" y="48" width="60" height="26" rx="4" ${BONE}/>${[1, 2, 3].map(k => `<line x1="${44 + k * 15}" y1="48" x2="${44 + k * 15}" y2="54" ${LINE("currentColor", 1)}/>`).join("")}
+<rect x="${44 - sh}" y="${pct > 1 ? 58 : 18}" width="60" height="26" rx="4" style="fill:var(--fig-fill);stroke:var(--mark)" stroke-width="1.8"/>
+${T(60, 94, `Grade ${gr}`, 12, "middle", B)}</svg>`; };
+  return fig(`<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:2px 4px">${main}${[["I", .15], ["II", .37], ["III", .62], ["IV", .87], ["V", 1.1]].map(([gr, p]) => thumb(gr, p)).join("")}</div>`,
+  "Lumbosacral junction, side view (front on your left), drawn with the S1 endplate level for clarity. The L5 body (outlined) has slid forward through a pars defect, leaving its back part behind. Divide the top of S1 into quarters, counted from the back; the grade is how many quarters L5 has slid past: I under 25%, II 25–50%, III 50–75%, IV 75–100%, V (spondyloptosis) off the end completely (Miller's, p. 253). The small row shows grades I to V.", 440);
+})();
+
+/* ---- Curve shapes by cause (AP convention) ---- */
+const FIG_SHAPES = (() => {
+  const B = 'font-weight="700"';
+  const idio = [0, -2, -6, -11, -17, -22, -25, -26, -24, -18, -10, -2, 6, 13, 16, 12, 5];
+  const nm = [0, 3, 7, 12, 17, 22, 27, 31, 35, 38, 40, 41, 40, 37, 32, 25, 16];
+  const nf = [0, 0, -1, -2, -4, -10, -24, -30, -24, -10, -4, -2, -1, 0, 0, 0, 0];
+  const col = (cx, title, sub, offs, opt, note) => `${T(cx, 16, title, 13, "middle", B)}${T(cx, 31, sub, 13, "middle")}${apStack(cx, 46, offs, opt)}${note}`;
+  const svg = `<svg viewBox="0 0 360 384" role="img" aria-label="Typical idiopathic, neuromuscular and NF1 dystrophic curve shapes">
+${col(64, "Idiopathic", "S-shaped, balanced", idio, {}, "")}
+${col(182, "Neuromuscular", "long C, pelvis tilted", nm.map(v => v - 20), { pelvisTilt: -12 }, `<line x1="136" y1="${46 + 17 * 15 + 30}" x2="232" y2="${46 + 17 * 15 + 10}" ${MARK(1.6, "5 4")}/>${T(182, 362, "pelvic obliquity", 13, "middle")}`)}
+${col(300, "NF1 dystrophic", "short, sharp apex", nf, { ribs: [6, 8] }, `${T(300, 362, "thin (penciled) ribs", 13, "middle")}${T(300, 377, "at the apex", 13, "middle")}`)}
+${AXES(22, 70, { u: "S", d: "I", l: "R", r: "L" }, 13)}
+</svg>`;
+  return fig(svg, "AP films (patient's right on your left), schematic. Idiopathic curves are usually S-shaped and balanced (typical right thoracic curve). Neuromuscular curves are long, sweeping C-shaped curves with pelvic obliquity (dashed line). Dystrophic NF1 curves are short and sharp with severe apical rotation; the ribs at the apex can be thin (penciled) (Miller's, pp. 250–251; penciled ribs not in Miller's).", 420);
+})();
 
 const L = (h, body) => ({ t: "learn", h, body });
 const Q = (q, c, a, e) => ({ t: "check", q, c, a, e });
@@ -2027,7 +2337,23 @@ function finish() {
   $("#next").disabled = true;
   $("#restart").onclick = () => { state = { li: 0, si: 0, done: {}, qa: {}, mig: 4 }; save(); render(); };
 }
+/* Figure zoom: tap any figure to open it full screen; turn the phone sideways for the largest view. */
+const figZoom = document.createElement("div");
+figZoom.id = "figzoom"; figZoom.hidden = true; figZoom.setAttribute("role", "dialog"); figZoom.setAttribute("aria-label", "Enlarged figure");
+figZoom.innerHTML = `<button class="btn zclose" type="button">Close</button><div class="zin"></div>`;
+document.body.appendChild(figZoom);
+const closeZoom = () => { figZoom.hidden = true; figZoom.querySelector(".zin").innerHTML = ""; document.body.style.overflow = ""; };
+figZoom.querySelector(".zclose").onclick = closeZoom;
+figZoom.addEventListener("click", e => { if (e.target === figZoom) closeZoom(); });
+document.addEventListener("click", e => {
+  const svg = e.target.closest("figure.fig svg");
+  if (!svg || figZoom.contains(svg)) return;
+  const cap = svg.closest("figure").querySelector("figcaption");
+  figZoom.querySelector(".zin").innerHTML = svg.outerHTML + (cap ? `<p class="zcap">${cap.innerHTML}</p>` : "");
+  figZoom.hidden = false; document.body.style.overflow = "hidden"; figZoom.scrollTop = 0;
+});
 document.addEventListener("keydown", e => {
+  if (!figZoom.hidden) { if (e.key === "Escape") closeZoom(); return; }
   if (e.target.closest("select")) return;
   if (e.key === "ArrowRight" && !$("#next").disabled) $("#next").click();
   if (e.key === "ArrowLeft" && !$("#prev").disabled) $("#prev").click();
