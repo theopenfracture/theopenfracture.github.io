@@ -1888,7 +1888,8 @@ function renderRail() {
 }
 $("#lessonSelect").onchange = e => go(+e.target.value, 0);
 
-function go(li, si) { state.li = li; state.si = si; const c = courseOf(li); state.pos = state.pos || {}; state.pos[c] = [li, si]; save(); render(); window.scrollTo(0, 0); }
+function go(li, si) { state.li = li; state.si = si; const c = courseOf(li); state.pos = state.pos || {}; state.pos[c] = [li, si]; save(); render(); toStep(); }
+function toStep() { const m = document.querySelector("#courseView main") || document.querySelector("main"); if (!m) return; const y = m.getBoundingClientRect().top + window.scrollY - 8; window.scrollTo(0, Math.max(0, y)); }
 
 function render() {
   const lesson = LESSONS[state.li], step = lesson.steps[state.si], k = key(state.li, state.si);
@@ -1955,7 +1956,7 @@ function renderQuiz(card, lesson, step, k) {
     card.innerHTML = `<span class="kind check">${label}</span><h2>Nothing to review right now.</h2><div class="body"><p>Questions you miss or skip in any quiz land here, and questions you got right come back after a week. You have ${c.missed} missed and ${c.skipped} skipped.</p></div>`;
     return;
   }
-  const go2 = p => { state.qpos[k] = p; save(); render(); };
+  const go2 = p => { state.qpos[k] = p; save(); render(); toStep(); };
   if (pos >= items.length) {
     const vals = items.map((_, i) => pass[i]);
     const right = vals.filter((v, i) => v === "got" || (typeof v === "number" && v === items[i].a)).length, skipped = vals.filter(v => v === "skip" || v === undefined).length;
